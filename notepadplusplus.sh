@@ -23,6 +23,15 @@ fi
 # First run setup
 if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     echo "First run: setting up Wine prefix..."
+
+    # Expose host/system fonts to Wine for better rendering and fallback.
+    mkdir -p "$WINEPREFIX/drive_c/windows/Fonts"
+    if [ -d /run/host/fonts ]; then
+        find /run/host/fonts -type f -print0 2>/dev/null | while IFS= read -r -d '' font; do
+            ln -sf "$font" "$WINEPREFIX/drive_c/windows/Fonts/" 2>/dev/null || true
+        done
+    fi
+
     wineboot --init
     
     # Wait for wineboot to finish
