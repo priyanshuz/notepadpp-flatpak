@@ -1,0 +1,54 @@
+name: Build and Publish Flatpak
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # allows manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub/flatpak-builder:latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: notepad-plus-plus.flatpak
+          manifest-path: com.notepad-plus-plus.NotepadPlusPlus.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Flatpak bundle as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notepad-plus-plus-flatpak
+          path: notepad-plus-plus.flatpak
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notepad-plus-plus-flatpak
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: notepad-plus-plus.flatpak
+          generate_release_notes: true
+        env:
+          # GITHUB_TOKEN is auto-provided by GitHub Actions — no setup needed
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
