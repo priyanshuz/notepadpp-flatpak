@@ -3,7 +3,12 @@ export WINEPREFIX=/var/data/wine
 export WINEDEBUG=-all
 export WINEARCH=win64
 export WINEDLLOVERRIDES="winemenubuilder.exe=d"
+export WINE_MONO_OVERRIDES="Microsoft.Xna.Framework,Microsoft.Xna.Framework.*"
 export PATH="/app/bin:$PATH"
+
+# Point Wine to bundled Mono and Gecko
+export WINE_MONO_DIR="/app/share/wine/mono"
+export WINE_GECKO_DIR="/app/share/wine/gecko"
 
 # Find wine64 first, fall back to wine
 if command -v wine64 >/dev/null 2>&1; then
