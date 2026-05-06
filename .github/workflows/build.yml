@@ -24,7 +24,7 @@ jobs:
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: notepad-plus-plus.flatpak
-          manifest-path: com.notepad-plus-plus.NotepadPlusPlus.yml
+          manifest-path: com.notepadplusplus.NotepadPlusPlus.yml
           cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Upload Flatpak bundle as artifact

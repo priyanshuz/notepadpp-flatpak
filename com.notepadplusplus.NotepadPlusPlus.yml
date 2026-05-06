@@ -1,4 +1,4 @@
-app-id: com.notepad-plus-plus.NotepadPlusPlus
+app-id: com.notepadplusplus.NotepadPlusPlus
 runtime: org.winehq.Wine
 runtime-version: stable-24.08
 sdk: org.winehq.Wine//stable-24.08
@@ -21,11 +21,11 @@ modules:
       # Install launcher script
       - install -Dm755 notepadplusplus.sh /app/bin/notepadplusplus.sh
       # Install desktop file
-      - install -Dm644 com.notepad-plus-plus.NotepadPlusPlus.desktop
-          /app/share/applications/com.notepad-plus-plus.NotepadPlusPlus.desktop
+      - install -Dm644 com.notepadplusplus.NotepadPlusPlus.desktop
+          /app/share/applications/com.notepadplusplus.NotepadPlusPlus.desktop
       # Install icon
-      - install -Dm644 com.notepad-plus-plus.NotepadPlusPlus.png
-          /app/share/icons/hicolor/256x256/apps/com.notepad-plus-plus.NotepadPlusPlus.png
+      - install -Dm644 com.notepadplusplus.NotepadPlusPlus.png
+          /app/share/icons/hicolor/256x256/apps/com.notepadplusplus.NotepadPlusPlus.png
       # Install Notepad++ installer and support files
       - install -Dm644 npp-installer.exe
           /app/share/notepadplusplus/npp-installer.exe
@@ -46,6 +46,6 @@ modules:
       - type: file
         path: dark-mode.reg
       - type: file
-        path: com.notepad-plus-plus.NotepadPlusPlus.desktop
+        path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file
-        path: com.notepad-plus-plus.NotepadPlusPlus.png
+        path: com.notepadplusplus.NotepadPlusPlus.png
