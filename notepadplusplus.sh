@@ -11,7 +11,7 @@ export WINE_MONO_DIR="/app/share/wine/mono"
 export WINE_GECKO_DIR="/app/share/wine/gecko"
 
 detect_dpi() {
-    local dpi=96
+    local dpi=""
 
     # Explicit override if user wants deterministic behavior.
     if [ -n "$NPP_WINE_DPI" ] && [ "$NPP_WINE_DPI" -eq "$NPP_WINE_DPI" ] 2>/dev/null; then
@@ -42,8 +42,31 @@ detect_dpi() {
                 dpi=$(awk -v rw="$res_w" -v pw="$phys_w" 'BEGIN { printf "%d", (rw / pw) * 25.4 + 0.5 }')
             fi
         fi
-    elif [ -n "$GDK_SCALE" ] && [ "$GDK_SCALE" -eq "$GDK_SCALE" ] 2>/dev/null; then
+    fi
+
+    if [ -z "$dpi" ] && command -v gsettings >/dev/null 2>&1; then
+        local scale
+        scale=$(gsettings get org.gnome.desktop.interface scaling-factor 2>/dev/null | awk '/uint32/ {print $2}')
+        if [ -n "$scale" ] && [ "$scale" -gt 1 ] 2>/dev/null; then
+            dpi=$((96 * scale))
+        fi
+    fi
+
+    if [ -z "$dpi" ] && command -v gsettings >/dev/null 2>&1; then
+        local text_scale
+        text_scale=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null)
+        if [ -n "$text_scale" ] && [ "$text_scale" != "1.0" ] 2>/dev/null; then
+            dpi=$(awk -v scale="$text_scale" 'BEGIN { printf "%d", 96 * scale + 0.5 }')
+        fi
+    fi
+
+    if [ -z "$dpi" ] && [ -n "$GDK_SCALE" ] && [ "$GDK_SCALE" -eq "$GDK_SCALE" ] 2>/dev/null; then
         dpi=$((96 * GDK_SCALE))
+    fi
+
+    if [ -z "$dpi" ]; then
+        echo ""
+        return
     fi
 
     if [ "$dpi" -lt 96 ] 2>/dev/null; then dpi=96; fi
@@ -55,6 +78,36 @@ set_wine_dpi() {
     local dpi="$1"
     "$WINE" reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
     "$WINE" reg add "HKCU\\Software\\Wine\\Fonts" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
+}
+
+get_current_wine_dpi() {
+    local value
+    value=$("$WINE" reg query "HKCU\\Control Panel\\Desktop" /v LogPixels 2>/dev/null | awk '/LogPixels/ {print $3}')
+    if [ -z "$value" ]; then
+        echo ""
+        return
+    fi
+
+    if echo "$value" | grep -q '^0x'; then
+        printf '%d\n' "$value" 2>/dev/null || echo ""
+    else
+        echo "$value"
+    fi
+}
+
+apply_wine_dpi() {
+    local detected_dpi current_dpi
+    detected_dpi=$(detect_dpi)
+
+    # Preserve user/manual DPI when the sandbox exposes no trustworthy scale signal.
+    if [ -z "$detected_dpi" ]; then
+        return
+    fi
+
+    current_dpi=$(get_current_wine_dpi)
+    if [ "$detected_dpi" != "$current_dpi" ]; then
+        set_wine_dpi "$detected_dpi"
+    fi
 }
 
 link_fonts() {
@@ -106,6 +159,6 @@ if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     echo "Setup complete."
 fi
 
-set_wine_dpi "$(detect_dpi)"
+apply_wine_dpi
 
 exec "$WINE" "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" "$@"
