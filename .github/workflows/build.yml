@@ -12,8 +12,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/flathub/flatpak-builder:latest
 
     steps:
       - name: Checkout repo
