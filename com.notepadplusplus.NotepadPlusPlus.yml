@@ -13,6 +13,17 @@ inherit-extensions:
   - org.winehq.Wine.gecko
   - org.winehq.Wine.mono
 
+add-extensions:
+  org.freedesktop.Platform.Compat.i386:
+    directory: lib/i386-linux-gnu
+    version: '24.08'
+  org.freedesktop.Platform.GL32.default:
+    directory: lib/i386-linux-gnu/GL
+    version: '24.08'
+    subdirectories: true
+    no-autodownload: true
+    autodelete: false
+
 finish-args:
   - --share=ipc
   - --socket=x11
@@ -22,11 +33,16 @@ finish-args:
   - --persist=.wine
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
+  - --env=WINEARCH=win64
+  - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
 
 modules:
   - name: notepadplusplus
     buildsystem: simple
     build-commands:
+      # Create directories for 32-bit compat extensions
+      - mkdir -p /app/lib/i386-linux-gnu
+      - mkdir -p /app/lib/i386-linux-gnu/GL
       # Install launcher script
       - install -Dm755 notepadplusplus.sh /app/bin/notepadplusplus.sh
       # Install desktop file
