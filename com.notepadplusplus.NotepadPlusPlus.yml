@@ -2,10 +2,9 @@ app-id: com.notepadplusplus.NotepadPlusPlus
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
+base: org.winehq.Wine
+base-version: stable-24.08
 command: notepadplusplus.sh
-
-sdk-extensions:
-  - org.winehq.Wine//stable-24.08
 
 finish-args:
   - --share=ipc
@@ -17,7 +16,6 @@ finish-args:
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
   - --env=WINEARCH=win64
-  - --env=PATH=/usr/lib/sdk/wine-stable/bin:/usr/lib/sdk/wine/bin:/app/bin:/usr/bin:/bin
 
 modules:
   - name: notepadplusplus
