@@ -31,8 +31,6 @@ finish-args:
   - --device=dri
   - --filesystem=home
   - --filesystem=~/.fonts:ro
-  - --filesystem=/usr/share/fonts:ro
-  - --filesystem=/usr/local/share/fonts:ro
   - --filesystem=/run/host/fonts:ro
   - --persist=.wine
   - --allow=multiarch
