@@ -1,7 +1,7 @@
 app-id: com.notepadplusplus.NotepadPlusPlus
-runtime: org.winehq.Wine
-runtime-version: stable-24.08
-sdk: org.freedesktop.Sdk//24.08
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
 command: notepadplusplus.sh
 
 finish-args:
@@ -11,10 +11,23 @@ finish-args:
   - --device=dri
   - --filesystem=home
   - --persist=.wine
+  - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
   - --env=WINEARCH=win64
+  - --env=PATH=/app/wine/bin:/app/bin:/usr/bin:/bin
 
 modules:
+  - name: wine
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/wine
+      - tar -xf wine.tar.xz -C /app/wine --strip-components=1
+    sources:
+      - type: file
+        url: https://github.com/Kron4ek/Wine-Builds/releases/download/9.0/wine-9.0-amd64.tar.xz
+        sha256: cf0c09d4346dc10bc92ab674936292cff47eeb71ca7604b8e6303b7bdb97e2f6
+        dest-filename: wine.tar.xz
+
   - name: notepadplusplus
     buildsystem: simple
     build-commands:
