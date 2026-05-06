@@ -21,7 +21,7 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/wine
-      - tar -xf wine.tar.xz -C /app/wine --strip-components=1
+      - tar -xf wine.tar.xz -C /app/wine --strip-components=1 --no-same-owner
     sources:
       - type: file
         url: https://github.com/Kron4ek/Wine-Builds/releases/download/9.0/wine-9.0-amd64.tar.xz
