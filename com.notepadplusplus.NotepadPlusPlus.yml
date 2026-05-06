@@ -1,7 +1,7 @@
 app-id: com.notepadplusplus.NotepadPlusPlus
 runtime: org.winehq.Wine
 runtime-version: stable-24.08
-sdk: org.winehq.Wine
+sdk: org.freedesktop.Sdk
 command: notepadplusplus.sh
 
 finish-args:
