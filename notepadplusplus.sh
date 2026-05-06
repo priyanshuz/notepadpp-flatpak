@@ -1,12 +1,9 @@
 #!/bin/bash
 export WINEPREFIX=/var/data/wine
 export WINEDEBUG=-all
-export WINEARCH=win64
 export PATH="/app/bin:$PATH"
 
-if command -v wine64 >/dev/null 2>&1; then
-    WINE="$(command -v wine64)"
-elif command -v wine >/dev/null 2>&1; then
+if command -v wine >/dev/null 2>&1; then
     WINE="$(command -v wine)"
 else
     echo "Wine binary not found in application runtime." >&2
