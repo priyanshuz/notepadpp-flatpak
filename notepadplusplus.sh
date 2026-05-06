@@ -2,12 +2,13 @@
 export WINEPREFIX=/var/data/wine
 export WINEDEBUG=-all
 export WINEARCH=win64
-export WINE=/app/wine/bin/wine
+export WINE=/app/wine/bin/wine64
+export WINEBOOT=/app/wine/bin/wineboot
 
 # First run setup
 if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     echo "First run: setting up Wine prefix..."
-    $WINE wineboot --init
+    $WINEBOOT --init
     
     echo "Installing Notepad++..."
     $WINE /app/share/notepadplusplus/npp-installer.exe /S
