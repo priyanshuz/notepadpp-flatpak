@@ -26,6 +26,7 @@ add-extensions:
 
 finish-args:
   - --share=ipc
+  - --unshare=network
   - --socket=x11
   - --socket=wayland
   - --device=dri
