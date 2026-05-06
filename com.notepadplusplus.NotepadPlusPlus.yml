@@ -62,7 +62,7 @@ modules:
           /app/share/notepadplusplus/npp-installer.exe
       - install -Dm644 dark-mode.reg
           /app/share/notepadplusplus/dark-mode.reg
-        - install -Dm644 light-mode.reg
+      - install -Dm644 light-mode.reg
           /app/share/notepadplusplus/light-mode.reg
 
     sources:
