@@ -10,104 +10,34 @@ export PATH="/app/bin:$PATH"
 export WINE_MONO_DIR="/app/share/wine/mono"
 export WINE_GECKO_DIR="/app/share/wine/gecko"
 
-detect_dpi() {
-    local dpi=""
-
-    # Explicit override if user wants deterministic behavior.
-    if [ -n "$NPP_WINE_DPI" ] && [ "$NPP_WINE_DPI" -eq "$NPP_WINE_DPI" ] 2>/dev/null; then
-        dpi="$NPP_WINE_DPI"
-    elif command -v xrandr >/dev/null 2>&1; then
-        local values
-        values=$(xrandr 2>/dev/null | awk '
-            / connected/ && /[0-9]+x[0-9]+/ && /[0-9]+mm x [0-9]+mm/ {
-                split($0, a, " ")
-                for (i = 1; i <= NF; i++) {
-                    if ($i ~ /^[0-9]+x[0-9]+/) {
-                        split($i, r, "x")
-                        rw = r[1]
-                        break
-                    }
-                }
-                if (match($0, /([0-9]+)mm x ([0-9]+)mm/, m)) {
-                    print rw " " m[1]
-                    exit
-                }
-            }
-        ')
-        if [ -n "$values" ]; then
-            local res_w phys_w
-            res_w=$(echo "$values" | awk '{print $1}')
-            phys_w=$(echo "$values" | awk '{print $2}')
-            if [ -n "$res_w" ] && [ -n "$phys_w" ] && [ "$phys_w" -gt 0 ] 2>/dev/null; then
-                dpi=$(awk -v rw="$res_w" -v pw="$phys_w" 'BEGIN { printf "%d", (rw / pw) * 25.4 + 0.5 }')
-            fi
-        fi
-    fi
-
-    if [ -z "$dpi" ] && command -v gsettings >/dev/null 2>&1; then
-        local scale
-        scale=$(gsettings get org.gnome.desktop.interface scaling-factor 2>/dev/null | awk '/uint32/ {print $2}')
-        if [ -n "$scale" ] && [ "$scale" -gt 1 ] 2>/dev/null; then
-            dpi=$((96 * scale))
-        fi
-    fi
-
-    if [ -z "$dpi" ] && command -v gsettings >/dev/null 2>&1; then
-        local text_scale
-        text_scale=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null)
-        if [ -n "$text_scale" ] && [ "$text_scale" != "1.0" ] 2>/dev/null; then
-            dpi=$(awk -v scale="$text_scale" 'BEGIN { printf "%d", 96 * scale + 0.5 }')
-        fi
-    fi
-
-    if [ -z "$dpi" ] && [ -n "$GDK_SCALE" ] && [ "$GDK_SCALE" -eq "$GDK_SCALE" ] 2>/dev/null; then
-        dpi=$((96 * GDK_SCALE))
-    fi
-
-    if [ -z "$dpi" ]; then
-        echo ""
-        return
-    fi
-
-    if [ "$dpi" -lt 96 ] 2>/dev/null; then dpi=96; fi
-    if [ "$dpi" -gt 288 ] 2>/dev/null; then dpi=288; fi
-    echo "$dpi"
-}
-
 set_wine_dpi() {
     local dpi="$1"
     "$WINE" reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
     "$WINE" reg add "HKCU\\Software\\Wine\\Fonts" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
 }
 
-get_current_wine_dpi() {
-    local value
-    value=$("$WINE" reg query "HKCU\\Control Panel\\Desktop" /v LogPixels 2>/dev/null | awk '/LogPixels/ {print $3}')
-    if [ -z "$value" ]; then
-        echo ""
-        return
-    fi
-
-    if echo "$value" | grep -q '^0x'; then
-        printf '%d\n' "$value" 2>/dev/null || echo ""
-    else
-        echo "$value"
-    fi
+normalize_dark_theme() {
+    case "${WINE_DARK_THEME:-NO}" in
+        YES|yes|Yes|TRUE|true|True|1|ON|on|On)
+            echo "YES"
+            ;;
+        *)
+            echo "NO"
+            ;;
+    esac
 }
 
 apply_wine_dpi() {
-    local detected_dpi current_dpi
-    detected_dpi=$(detect_dpi)
+    local dpi="${NPP_WINE_DPI:-96}"
 
-    # Preserve user/manual DPI when the sandbox exposes no trustworthy scale signal.
-    if [ -z "$detected_dpi" ]; then
-        return
+    if ! [ "$dpi" -eq "$dpi" ] 2>/dev/null; then
+        dpi=96
     fi
 
-    current_dpi=$(get_current_wine_dpi)
-    if [ "$detected_dpi" != "$current_dpi" ]; then
-        set_wine_dpi "$detected_dpi"
-    fi
+    if [ "$dpi" -lt 96 ] 2>/dev/null; then dpi=96; fi
+    if [ "$dpi" -gt 288 ] 2>/dev/null; then dpi=288; fi
+
+    set_wine_dpi "$dpi"
 }
 
 link_fonts() {
@@ -119,6 +49,26 @@ link_fonts() {
                 ln -sf "$font" "$font_dir/" 2>/dev/null || true
             done
     fi
+}
+
+sync_wine_theme() {
+    local theme_mode theme_stamp reg_file
+    theme_mode=$(normalize_dark_theme)
+    theme_stamp="$WINEPREFIX/.notepadplusplus-theme"
+
+    if [ "$theme_mode" = "YES" ]; then
+        reg_file="/app/share/notepadplusplus/dark-mode.reg"
+    else
+        reg_file="/app/share/notepadplusplus/light-mode.reg"
+    fi
+
+    if [ -f "$theme_stamp" ] && [ "$(cat "$theme_stamp" 2>/dev/null)" = "$theme_mode" ]; then
+        return
+    fi
+
+    echo "Applying ${theme_mode,,} theme registry..."
+    "$WINE" regedit "$reg_file"
+    printf '%s\n' "$theme_mode" > "$theme_stamp"
 }
 
 # Find wine64 first, fall back to wine
@@ -149,9 +99,6 @@ if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     # Wait for installer to finish
     wineserver --wait
 
-    echo "Applying dark mode registry..."
-    "$WINE" regedit /app/share/notepadplusplus/dark-mode.reg
-
     echo "Linking host fonts..."
     link_fonts
 
@@ -159,6 +106,7 @@ if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     echo "Setup complete."
 fi
 
+sync_wine_theme
 apply_wine_dpi
 
 exec "$WINE" "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" "$@"

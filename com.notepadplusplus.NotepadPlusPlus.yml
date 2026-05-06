@@ -36,6 +36,8 @@ finish-args:
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
   - --env=WINEARCH=win64
+  - --env=NPP_WINE_DPI=96
+  - --env=WINE_DARK_THEME=NO
   - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
   - --env=FONTCONFIG_PATH=/etc/fonts
   - --env=XDG_DATA_DIRS=/usr/share:/app/share
@@ -60,6 +62,8 @@ modules:
           /app/share/notepadplusplus/npp-installer.exe
       - install -Dm644 dark-mode.reg
           /app/share/notepadplusplus/dark-mode.reg
+        - install -Dm644 light-mode.reg
+          /app/share/notepadplusplus/light-mode.reg
 
     sources:
       - type: file
@@ -74,6 +78,8 @@ modules:
         path: notepadplusplus.sh
       - type: file
         path: dark-mode.reg
+      - type: file
+        path: light-mode.reg
       - type: file
         path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file
