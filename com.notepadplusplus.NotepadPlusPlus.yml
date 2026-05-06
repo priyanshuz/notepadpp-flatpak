@@ -3,16 +3,14 @@ runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
 base: org.winehq.Wine
-base-version: stable-24.08
+base-version: wow64-24.08
 command: notepadplusplus.sh
 
 inherit-extensions:
-  - org.freedesktop.Platform.Compat.i386
   - org.freedesktop.Platform.GL32
   - org.freedesktop.Platform.ffmpeg-full
-  - org.freedesktop.Platform.ffmpeg_full.i386
-  - org.winehq.Wine.gecko
-  - org.winehq.Wine.mono
+  - org.winehq.Wine.gecko-wow64
+  - org.winehq.Wine.mono-wow64
 
 finish-args:
   - --share=ipc
