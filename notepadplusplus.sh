@@ -87,23 +87,45 @@ theme_mode  = sys.argv[2].upper()
 with open(config_file, 'r', encoding='utf-8') as f:
     content = f.read()
 
-def set_attr(text, attr, value):
-    pattern = r'(?<=' + attr + r'=")[^"]*(?=")'
-    if re.search(pattern, text):
-        return re.sub(pattern, value, text)
-    return text
+def set_attr(text, tag_name, attr, value):
+    """Set attr="value" only within the GUIConfig tag with the given name."""
+    def replacer(m):
+        tag = m.group(0)
+        tag = re.sub(r'(?<=' + attr + r'=")[^"]*(?=")', value, tag)
+        return tag
+    return re.sub(
+        r'<GUIConfig name="' + re.escape(tag_name) + r'"[^>]*/?>',
+        replacer, text
+    )
 
-if '<GUIConfig name="DarkMode"' not in content:
-    sys.exit(0)
+def set_text_content(text, tag_name, value):
+    """Replace text content of <GUIConfig name="TAG">...</GUIConfig>."""
+    return re.sub(
+        r'(<GUIConfig name="' + re.escape(tag_name) + r'"[^>]*>)[^<]*(</GUIConfig>)',
+        lambda m: m.group(1) + value + m.group(2),
+        text
+    )
 
-if theme_mode == 'YES':
-    content = set_attr(content, 'enable',           'yes')
-    content = set_attr(content, 'colorTone',         '0')
-    content = set_attr(content, 'enableWindowsMode', 'no')
-    content = set_attr(content, 'darkThemeName',     'Obsidian.xml')
-else:
-    content = set_attr(content, 'enable',            'no')
-    content = set_attr(content, 'enableWindowsMode', 'no')
+# ── Always-on preferences ─────────────────────────────────────────────────────
+# Hide right shortcuts in menu bar
+content = set_attr(content, 'MISC', 'hideMenuRightShortcuts', 'yes')
+
+# Fluent UI: small toolbar
+content = set_text_content(content, 'ToolBar', 'fluent:small')
+
+# Enable smooth font
+content = set_attr(content, 'ScintillaPrimaryView', 'smoothFont', 'yes')
+
+# ── Theme ─────────────────────────────────────────────────────────────────────
+if '<GUIConfig name="DarkMode"' in content:
+    if theme_mode == 'YES':
+        content = set_attr(content, 'DarkMode', 'enable',           'yes')
+        content = set_attr(content, 'DarkMode', 'colorTone',         '0')
+        content = set_attr(content, 'DarkMode', 'enableWindowsMode', 'no')
+        content = set_attr(content, 'DarkMode', 'darkThemeName',     'Obsidian.xml')
+    else:
+        content = set_attr(content, 'DarkMode', 'enable',            'no')
+        content = set_attr(content, 'DarkMode', 'enableWindowsMode', 'no')
 
 with open(config_file, 'w', encoding='utf-8') as f:
     f.write(content)
