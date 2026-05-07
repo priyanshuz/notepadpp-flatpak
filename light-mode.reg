@@ -1,8 +1,14 @@
 Windows Registry Editor Version 5.00
 
+; Light mode registry patch for Wine.
+; Applied by notepadplusplus.sh when WINE_DARK_THEME is not YES.
+; Restores standard Windows light UI colours and marks the theme as active.
+
+; Enable the classic Windows theme manager
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ThemeManager]
 "ThemeActive"="1"
 
+; System colour palette — standard Windows light theme values (RGB as decimal strings)
 [HKEY_CURRENT_USER\Control Panel\Colors]
 "ActiveBorder"="212 208 200"
 "ActiveTitle"="10 36 106"
@@ -10,9 +16,11 @@ Windows Registry Editor Version 5.00
 "Background"="58 110 165"
 "ButtonAlternateFace"="181 181 181"
 "ButtonDkShadow"="64 64 64"
-"ButtonFace"="212 208 200"
+; Button face / controls — light grey
+"ButtonFace"="240 240 240"
+; Highlight / light surfaces — white
 "ButtonHilight"="255 255 255"
-"ButtonLight"="212 208 200"
+"ButtonLight"="255 255 255"
 "ButtonShadow"="128 128 128"
 "ButtonText"="0 0 0"
 "GradientActiveTitle"="166 202 240"
@@ -25,16 +33,20 @@ Windows Registry Editor Version 5.00
 "InactiveTitle"="128 128 128"
 "InactiveTitleText"="212 208 200"
 "InfoText"="0 0 0"
+; Tooltip background — pale yellow
 "InfoWindow"="255 255 225"
-"Menu"="212 208 200"
-"MenuBar"="212 208 200"
+; Menu / menu bar — light grey
+"Menu"="240 240 240"
+"MenuBar"="240 240 240"
 "MenuHilight"="10 36 106"
 "MenuText"="0 0 0"
 "Scrollbar"="212 208 200"
 "TitleText"="255 255 255"
+; Window client area — white
 "Window"="255 255 255"
 "WindowFrame"="0 0 0"
 "WindowText"="0 0 0"
 
+; Tell Windows/Wine apps to use the light theme (0 = dark, 1 = light)
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
 "AppsUseLightTheme"=dword:00000001
