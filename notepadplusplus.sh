@@ -72,11 +72,17 @@ sync_wine_theme() {
 }
 
 sync_npp_config_theme() {
-    local theme_mode config_file
+    local theme_mode config_file stamp
     theme_mode=$(normalize_dark_theme)
     config_file="$WINEPREFIX/drive_c/users/$USER/AppData/Roaming/Notepad++/config.xml"
+    stamp="$WINEPREFIX/.notepadplusplus-npp-config"
 
     [ -f "$config_file" ] || return
+
+    # Skip if config was already patched for the current theme.
+    if [ -f "$stamp" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$theme_mode" ]; then
+        return
+    fi
 
     python3 - "$config_file" "$theme_mode" <<'PYEOF'
 import sys, re
@@ -130,6 +136,7 @@ if '<GUIConfig name="DarkMode"' in content:
 with open(config_file, 'w', encoding='utf-8') as f:
     f.write(content)
 PYEOF
+    printf '%s\n' "$theme_mode" > "$stamp"
 }
 
 # Find wine64 first, fall back to wine
