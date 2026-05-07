@@ -6,6 +6,14 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
 
 ---
 
+## Screenshots
+
+| Light mode | Dark mode |
+|---|---|
+| ![Notepad++ light mode](screenshots/notepadpp-light-mode.png) | ![Notepad++ dark mode](screenshots/notepadpp-dark-mode.png) |
+
+---
+
 ## Requirements
 
 - Flatpak runtime `org.freedesktop.Platform//24.08`
