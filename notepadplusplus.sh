@@ -71,6 +71,45 @@ sync_wine_theme() {
     printf '%s\n' "$theme_mode" > "$theme_stamp"
 }
 
+sync_npp_config_theme() {
+    local theme_mode config_file
+    theme_mode=$(normalize_dark_theme)
+    config_file="$WINEPREFIX/drive_c/users/$USER/AppData/Roaming/Notepad++/config.xml"
+
+    [ -f "$config_file" ] || return
+
+    python3 - "$config_file" "$theme_mode" <<'PYEOF'
+import sys, re
+
+config_file = sys.argv[1]
+theme_mode  = sys.argv[2].upper()
+
+with open(config_file, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+def set_attr(text, attr, value):
+    pattern = r'(?<=' + attr + r'=")[^"]*(?=")'
+    if re.search(pattern, text):
+        return re.sub(pattern, value, text)
+    return text
+
+if '<GUIConfig name="DarkMode"' not in content:
+    sys.exit(0)
+
+if theme_mode == 'YES':
+    content = set_attr(content, 'enable',           'yes')
+    content = set_attr(content, 'colorTone',         '0')
+    content = set_attr(content, 'enableWindowsMode', 'no')
+    content = set_attr(content, 'darkThemeName',     'Obsidian.xml')
+else:
+    content = set_attr(content, 'enable',            'no')
+    content = set_attr(content, 'enableWindowsMode', 'no')
+
+with open(config_file, 'w', encoding='utf-8') as f:
+    f.write(content)
+PYEOF
+}
+
 # Find wine64 first, fall back to wine
 if command -v wine64 >/dev/null 2>&1; then
     WINE="$(command -v wine64)"
@@ -107,6 +146,7 @@ if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
 fi
 
 sync_wine_theme
+sync_npp_config_theme
 apply_wine_dpi
 
 exec "$WINE" "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" "$@"
