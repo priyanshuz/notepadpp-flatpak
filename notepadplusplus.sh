@@ -67,16 +67,20 @@ sync_wine_theme() {
     fi
 
     echo "Applying ${theme_mode,,} theme registry..."
-    "$WINE" regedit "$reg_file"
+    if ! "$WINE" regedit "$reg_file"; then
+        echo "Warning: failed to apply ${theme_mode,,} theme registry." >&2
+        return
+    fi
     printf '%s\n' "$theme_mode" > "$theme_stamp"
 }
 
 sync_npp_config_theme() {
     local theme_mode config_file stamp
     theme_mode=$(normalize_dark_theme)
-    config_file="$WINEPREFIX/drive_c/users/$USER/AppData/Roaming/Notepad++/config.xml"
+    config_file=$(find "$WINEPREFIX/drive_c/users" -maxdepth 5 -type f -path '*/AppData/Roaming/Notepad++/config.xml' 2>/dev/null | head -n1)
     stamp="$WINEPREFIX/.notepadplusplus-npp-config"
 
+    [ -n "$config_file" ] || return
     [ -f "$config_file" ] || return
 
     # Skip if config was already patched for the current theme.
@@ -84,7 +88,7 @@ sync_npp_config_theme() {
         return
     fi
 
-    python3 - "$config_file" "$theme_mode" <<'PYEOF'
+    if ! python3 - "$config_file" "$theme_mode" <<'PYEOF'
 import sys, re
 
 config_file = sys.argv[1]
@@ -136,6 +140,10 @@ if '<GUIConfig name="DarkMode"' in content:
 with open(config_file, 'w', encoding='utf-8') as f:
     f.write(content)
 PYEOF
+    then
+        echo "Warning: failed to patch Notepad++ config.xml." >&2
+        return
+    fi
     printf '%s\n' "$theme_mode" > "$stamp"
 }
 
@@ -156,13 +164,19 @@ cd "$HOME" 2>/dev/null || cd /var/data || true
 if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
     echo "First run: setting up Wine prefix..."
 
-    wineboot --init
+    if ! wineboot --init; then
+        echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
+        exit 1
+    fi
     
     # Wait for wineboot to finish
     wineserver --wait
 
     echo "Installing Notepad++..."
-    "$WINE" /app/share/notepadplusplus/npp-installer.exe /S
+    if ! "$WINE" /app/share/notepadplusplus/npp-installer.exe /S; then
+        echo "Notepad++ installer failed to run." >&2
+        exit 1
+    fi
 
     # Wait for installer to finish
     wineserver --wait
