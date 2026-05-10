@@ -29,7 +29,8 @@ jobs:
 
       - name: Build Flatpak repository
         run: |
-          flatpak-builder --force-clean --repo=repo build-dir com.notepadplusplus.NotepadPlusPlus.yml
+          dbus-uuidgen --ensure=/etc/machine-id
+          flatpak-builder --disable-rofiles-fuse --force-clean --repo=repo build-dir com.notepadplusplus.NotepadPlusPlus.yml
           flatpak build-update-repo repo --generate-static-deltas --default-branch=master
 
       - name: Generate flatpakref
