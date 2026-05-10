@@ -30,18 +30,23 @@ With the `.flatpakref` install path below, Flatpak resolves these automatically.
 
 ## Installation
 
-### Recommended (automatic dependencies)
+### Recommended (one-command installer)
 
-Install from the published Flatpak repo reference:
+Download and run the installer script — it installs required Wine extensions from Flathub and then the app:
 
 ```bash
-flatpak install --user https://priyanshuz.github.io/notepadpp-flatpak/com.notepadplusplus.NotepadPlusPlus.flatpakref
+bash <(curl -fsSL https://raw.githubusercontent.com/priyanshuz/notepadpp-flatpak/main/install.sh)
 ```
 
-### From GitHub Release bundle (manual dependencies)
+Or download `install.sh` from [Releases](../../releases) and run:
 
-1. Go to [Releases](../../releases) and download the latest `notepad-plus-plus.flatpak`.
-2. Install required extensions first:
+```bash
+bash install.sh
+```
+
+### Manual (advanced)
+
+1. Install required Wine runtime extensions from Flathub:
 
 ```bash
 flatpak install -y flathub \
@@ -51,10 +56,10 @@ flatpak install -y flathub \
   org.winehq.Wine.mono/x86_64/stable-24.08
 ```
 
-3. Install the app bundle:
+2. Install the app:
 
 ```bash
-flatpak install --user notepad-plus-plus.flatpak
+flatpak install --user https://priyanshuz.github.io/notepadpp-flatpak/com.notepadplusplus.NotepadPlusPlus.flatpakref
 ```
 
 ### First launch
