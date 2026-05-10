@@ -20,12 +20,31 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Build Flatpak
+      - name: Build Flatpak bundle
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: notepad-plus-plus.flatpak
           manifest-path: com.notepadplusplus.NotepadPlusPlus.yml
           cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Build Flatpak repository
+        run: |
+          flatpak-builder --force-clean --repo=repo build-dir com.notepadplusplus.NotepadPlusPlus.yml
+          flatpak build-update-repo repo --generate-static-deltas --default-branch=master
+
+      - name: Generate flatpakref
+        run: |
+          REPO_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/repo"
+          cat > com.notepadplusplus.NotepadPlusPlus.flatpakref <<EOF
+          [Flatpak Ref]
+          Name=com.notepadplusplus.NotepadPlusPlus
+          Branch=master
+          Title=Notepad++ (Unofficial)
+          IsRuntime=false
+          Url=${REPO_URL}
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          NoGPGVerify=true
+          EOF
 
       - name: Upload Flatpak bundle as artifact
         uses: actions/upload-artifact@v4
@@ -33,6 +52,47 @@ jobs:
           name: notepad-plus-plus-flatpak
           path: notepad-plus-plus.flatpak
           retention-days: 30
+
+      - name: Upload Flatpak repository as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notepad-plus-plus-repo
+          path: repo
+          retention-days: 30
+
+      - name: Upload flatpakref as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notepad-plus-plus-flatpakref
+          path: com.notepadplusplus.NotepadPlusPlus.flatpakref
+          retention-days: 30
+
+  publish-repo:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download repo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notepad-plus-plus-repo
+          path: site/repo
+
+      - name: Download flatpakref artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notepad-plus-plus-flatpakref
+          path: site
+
+      - name: Publish to GitHub Pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: site
 
   release:
     needs: build
@@ -47,10 +107,17 @@ jobs:
         with:
           name: notepad-plus-plus-flatpak
 
+      - name: Download flatpakref artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notepad-plus-plus-flatpakref
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: notepad-plus-plus.flatpak
+          files: |
+            notepad-plus-plus.flatpak
+            com.notepadplusplus.NotepadPlusPlus.flatpakref
           generate_release_notes: true
         env:
           # GITHUB_TOKEN is auto-provided by GitHub Actions — no setup needed

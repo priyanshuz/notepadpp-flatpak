@@ -24,9 +24,25 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
   - `org.winehq.Wine.gecko` (IE engine)
   - `org.winehq.Wine.mono` (.NET runtime)
 
-**When installing from Flathub:** Extensions are installed automatically.
+With the `.flatpakref` install path below, Flatpak resolves these automatically.
 
-**When installing from a local `.flatpak` file:** You must pre-install the extensions first:
+---
+
+## Installation
+
+### Recommended (automatic dependencies)
+
+Install from the published Flatpak repo reference:
+
+```bash
+flatpak install --user https://priyanshuz.github.io/notepadpp-flatpak/com.notepadplusplus.NotepadPlusPlus.flatpakref
+```
+
+### From GitHub Release bundle (manual dependencies)
+
+1. Go to [Releases](../../releases) and download the latest `notepad-plus-plus.flatpak`.
+2. Install required extensions first:
+
 ```bash
 flatpak install -y flathub \
   org.freedesktop.Platform.Compat.i386//24.08 \
@@ -35,33 +51,8 @@ flatpak install -y flathub \
   org.winehq.Wine.mono/x86_64/stable-24.08
 ```
 
-Then install the Notepad++ app.
+3. Install the app bundle:
 
----
-
-## Installation
-
-### From GitHub Actions artifact
-
-1. Go to [Actions](../../actions) and open the latest successful build.
-2. Download the `Notepad++-flatpak` artifact and unzip it.
-3. **Install required extensions first** (see [Requirements](#requirements)):
-```bash
-flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko/x86_64/stable-24.08 org.winehq.Wine.mono/x86_64/stable-24.08
-```
-4. Install the app:
-```bash
-flatpak install --user notepad-plus-plus.flatpak
-```
-
-### From GitHub Release
-
-1. Go to [Releases](../../releases) and download the latest `notepad-plus-plus.flatpak`.
-2. **Install required extensions first** (see [Requirements](#requirements)):
-```bash
-flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko/x86_64/stable-24.08 org.winehq.Wine.mono/x86_64/stable-24.08
-```
-3. Install the app:
 ```bash
 flatpak install --user notepad-plus-plus.flatpak
 ```
