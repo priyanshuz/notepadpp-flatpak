@@ -18,8 +18,24 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
 
 - Flatpak runtime `org.freedesktop.Platform//24.08`
 - Wine base `org.winehq.Wine//stable-24.08`
+- Wine extensions:
+  - `org.freedesktop.Platform.Compat.i386//24.08` (32-bit compatibility)
+  - `org.freedesktop.Platform.GL32.default//24.08` (32-bit graphics)
+  - `org.winehq.Wine.gecko` (IE engine)
+  - `org.winehq.Wine.mono` (.NET runtime)
 
-These are installed automatically from Flathub when you install the app.
+**When installing from Flathub:** Extensions are installed automatically.
+
+**When installing from a local `.flatpak` file:** You must pre-install the extensions first:
+```bash
+flatpak install -y flathub \
+  org.freedesktop.Platform.Compat.i386//24.08 \
+  org.freedesktop.Platform.GL32.default//24.08 \
+  org.winehq.Wine.gecko \
+  org.winehq.Wine.mono
+```
+
+Then install the Notepad++ app.
 
 ---
 
@@ -29,10 +45,25 @@ These are installed automatically from Flathub when you install the app.
 
 1. Go to [Actions](../../actions) and open the latest successful build.
 2. Download the `Notepad++-flatpak` artifact and unzip it.
-3. Install:
-
+3. **Install required extensions first** (see [Requirements](#requirements)):
 ```bash
-flatpak install --user com.notepadplusplus.NotepadPlusPlus.flatpak
+flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko org.winehq.Wine.mono
+```
+4. Install the app:
+```bash
+flatpak install --user notepad-plus-plus.flatpak
+```
+
+### From GitHub Release
+
+1. Go to [Releases](../../releases) and download the latest `notepad-plus-plus.flatpak`.
+2. **Install required extensions first** (see [Requirements](#requirements)):
+```bash
+flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko org.winehq.Wine.mono
+```
+3. Install the app:
+```bash
+flatpak install --user notepad-plus-plus.flatpak
 ```
 
 ### First launch
