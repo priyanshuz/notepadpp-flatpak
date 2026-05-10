@@ -31,8 +31,8 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
 flatpak install -y flathub \
   org.freedesktop.Platform.Compat.i386//24.08 \
   org.freedesktop.Platform.GL32.default//24.08 \
-  org.winehq.Wine.gecko \
-  org.winehq.Wine.mono
+  org.winehq.Wine.gecko/x86_64/stable-24.08 \
+  org.winehq.Wine.mono/x86_64/stable-24.08
 ```
 
 Then install the Notepad++ app.
@@ -47,7 +47,7 @@ Then install the Notepad++ app.
 2. Download the `Notepad++-flatpak` artifact and unzip it.
 3. **Install required extensions first** (see [Requirements](#requirements)):
 ```bash
-flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko org.winehq.Wine.mono
+flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko/x86_64/stable-24.08 org.winehq.Wine.mono/x86_64/stable-24.08
 ```
 4. Install the app:
 ```bash
@@ -59,7 +59,7 @@ flatpak install --user notepad-plus-plus.flatpak
 1. Go to [Releases](../../releases) and download the latest `notepad-plus-plus.flatpak`.
 2. **Install required extensions first** (see [Requirements](#requirements)):
 ```bash
-flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko org.winehq.Wine.mono
+flatpak install -y flathub org.freedesktop.Platform.Compat.i386//24.08 org.freedesktop.Platform.GL32.default//24.08 org.winehq.Wine.gecko/x86_64/stable-24.08 org.winehq.Wine.mono/x86_64/stable-24.08
 ```
 3. Install the app:
 ```bash
