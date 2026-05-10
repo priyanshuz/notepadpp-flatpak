@@ -13,6 +13,12 @@ inherit-extensions:
   - org.winehq.Wine.gecko
   - org.winehq.Wine.mono
 
+requires:
+  - org.freedesktop.Platform.Compat.i386//24.08
+  - org.freedesktop.Platform.GL32.default//24.08
+  - org.winehq.Wine.gecko
+  - org.winehq.Wine.mono
+
 add-extensions:
   org.freedesktop.Platform.Compat.i386:
     directory: lib/i386-linux-gnu
