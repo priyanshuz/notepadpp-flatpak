@@ -155,6 +155,46 @@ flatpak-builder --user --install --force-clean build-dir \
 
 ---
 
+## Automated updates and publishing
+
+This repository is configured to auto-publish whenever upstream Notepad++ releases a new version.
+
+### What is automated
+
+- Upstream version check: `.github/workflows/auto-update-notepadpp.yml` runs every 6 hours.
+- Manifest bump: it updates `com.notepadplusplus.NotepadPlusPlus.yml` with the latest installer URL and SHA256 checksums.
+- Auto commit + tag: it commits to `main` and pushes a version tag (for example `v8.9.6.1`).
+- Flatpak build + Pages publish: `.github/workflows/build.yml` runs on `main` push and publishes:
+  - `repo/` to `gh-pages`
+  - `com.notepadplusplus.NotepadPlusPlus.flatpakref` to the root of `gh-pages`
+- GitHub Release assets: `.github/workflows/build.yml` runs on `v*` tags and uploads:
+  - `notepad-plus-plus.flatpak`
+  - `com.notepadplusplus.NotepadPlusPlus.flatpakref`
+  - `install.sh`
+
+### One-time GitHub settings
+
+- Actions workflow permissions: set to **Read and write**.
+- GitHub Pages source: publish from branch `gh-pages`.
+
+### GitHub setup runbook (click path)
+
+1. Open **Settings -> Actions -> General**.
+2. Under **Workflow permissions**, select **Read and write permissions**.
+3. Save the setting.
+4. Open **Settings -> Pages**.
+5. Under **Build and deployment**, choose:
+  - **Source**: `Deploy from a branch`
+  - **Branch**: `gh-pages`
+  - **Folder**: `/ (root)`
+6. Save and wait for the first successful publish.
+7. Optional verification:
+  - Run **Actions -> Auto Update Notepad++ -> Run workflow**.
+  - Confirm the `Build and Publish Flatpak` workflow runs after the bump commit/tag.
+  - Open the Pages URL and confirm `com.notepadplusplus.NotepadPlusPlus.flatpakref` is reachable.
+
+---
+
 ## Files
 
 | File | Purpose |

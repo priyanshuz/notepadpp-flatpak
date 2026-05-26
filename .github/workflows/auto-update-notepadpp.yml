@@ -1,0 +1,97 @@
+name: Auto Update Notepad++
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: auto-update-notepadpp
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update-notepadpp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update manifest to latest upstream release
+        env:
+          MANIFEST: com.notepadplusplus.NotepadPlusPlus.yml
+        run: |
+          set -euo pipefail
+
+          current_version=$(grep -oP 'releases/download/v\K[^/]+' "$MANIFEST" | head -n1)
+          latest_tag=$(curl -fsSL https://api.github.com/repos/notepad-plus-plus/notepad-plus-plus/releases/latest | jq -r '.tag_name')
+          latest_version=${latest_tag#v}
+
+          echo "Current version: $current_version"
+          echo "Latest version:  $latest_version"
+
+          if [[ "$current_version" == "$latest_version" ]]; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          tmpdir=$(mktemp -d)
+          base_url="https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v${latest_version}"
+          exe_name="npp.${latest_version}.Installer.x64.exe"
+          sig_name="${exe_name}.sig"
+
+          curl -fsSL -o "$tmpdir/$exe_name" "$base_url/$exe_name"
+          curl -fsSL -o "$tmpdir/$sig_name" "$base_url/$sig_name"
+
+          exe_sha=$(sha256sum "$tmpdir/$exe_name" | awk '{print $1}')
+          sig_sha=$(sha256sum "$tmpdir/$sig_name" | awk '{print $1}')
+
+          sed -E \
+            "s#(releases/download/v)${current_version}(/npp\\.)${current_version}(\\.Installer\\.x64\\.exe(\\.sig)?)#\\1${latest_version}\\2${latest_version}\\3#g" \
+            "$MANIFEST" > "$MANIFEST.tmp"
+
+          awk -v s1="$exe_sha" -v s2="$sig_sha" '
+            /^[[:space:]]*sha256:/ {
+              count++
+              if (count == 1) {
+                sub(/[a-f0-9]{64}/, s1)
+              } else if (count == 2) {
+                sub(/[a-f0-9]{64}/, s2)
+              }
+            }
+            { print }
+          ' "$MANIFEST.tmp" > "$MANIFEST"
+          rm -f "$MANIFEST.tmp"
+
+          echo "Manifest updated to Notepad++ ${latest_version}"
+
+      - name: Commit and push changes
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- com.notepadplusplus.NotepadPlusPlus.yml; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          latest_version=$(grep -oP 'releases/download/v\K[^/]+' com.notepadplusplus.NotepadPlusPlus.yml | head -n1)
+          tag="v${latest_version}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add com.notepadplusplus.NotepadPlusPlus.yml
+          git commit -m "chore: bump Notepad++ to ${latest_version}"
+
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} already exists; pushing commit only."
+            git push origin HEAD:main
+          else
+            git tag "${tag}"
+            git push origin HEAD:main "refs/tags/${tag}"
+          fi
