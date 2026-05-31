@@ -67,12 +67,12 @@ modules:
 
     sources:
       - type: file
-        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.1/npp.8.9.6.1.Installer.x64.exe
-        sha256: d8414ee7a38dd3a88c1d7479d115f7e2dc142970f995cb6d34e9c6f104b245c7
+        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe
+        sha256: 7c243203265ce8fdac76c839bf744ae35dcf620760eb97c2ea279af498560e45
         dest-filename: npp-installer.exe
       - type: file
-        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.1/npp.8.9.6.1.Installer.x64.exe.sig
-        sha256: a9945ea738c5a4253f50351f7a4b5a7097b65b40cbffdde0eb980eae5f03132c
+        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe.sig
+        sha256: ba35ecebc0123ba318f1f82bffb16ad85d694629b6b0d754a72cfe832eab4c06
         dest-filename: npp-installer.exe.sig
       - type: file
         path: notepadplusplus.sh
