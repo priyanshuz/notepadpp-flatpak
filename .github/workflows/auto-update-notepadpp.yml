@@ -10,11 +10,15 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
   update-notepadpp:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit_push.outputs.changed }}
+      tag: ${{ steps.commit_push.outputs.tag }}
 
     steps:
       - name: Checkout repository
@@ -71,11 +75,13 @@ jobs:
           echo "Manifest updated to Notepad++ ${latest_version}"
 
       - name: Commit and push changes
+        id: commit_push
         run: |
           set -euo pipefail
 
           if git diff --quiet -- com.notepadplusplus.NotepadPlusPlus.yml; then
             echo "No changes to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -87,6 +93,8 @@ jobs:
 
           git add com.notepadplusplus.NotepadPlusPlus.yml
           git commit -m "chore: bump Notepad++ to ${latest_version}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             echo "Tag ${tag} already exists; pushing commit only."
@@ -95,3 +103,24 @@ jobs:
             git tag "${tag}"
             git push origin HEAD:main "refs/tags/${tag}"
           fi
+
+  trigger-build-and-release:
+    needs: update-notepadpp
+    if: needs.update-notepadpp.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger main build workflow (Pages publish)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/dispatches" \
+            -f ref='main'
+
+      - name: Trigger tag build workflow (Release assets)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.update-notepadpp.outputs.tag }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/dispatches" \
+            -f ref="${TAG}"
