@@ -196,3 +196,53 @@ jobs:
         env:
           # GITHUB_TOKEN is auto-provided by GitHub Actions — no setup needed
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  reconcile-missing-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Re-dispatch tag build when release is missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          version=$(grep -oP 'releases/download/v\K[^/]+' com.notepadplusplus.NotepadPlusPlus.yml | head -n1)
+          tag="v${version}"
+
+          if ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} does not exist yet; nothing to reconcile."
+            exit 0
+          fi
+
+          status_code=$(curl -sS -o /tmp/release.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${tag}")
+
+          if [[ "${status_code}" == "200" ]]; then
+            echo "Release ${tag} already exists."
+            exit 0
+          fi
+
+          if [[ "${status_code}" != "404" ]]; then
+            echo "Unexpected API response ${status_code} while checking release ${tag}."
+            cat /tmp/release.json
+            exit 1
+          fi
+
+          echo "Release ${tag} is missing; dispatching tag workflow."
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/actions/workflows/build.yml/dispatches" \
+            -d "{\"ref\":\"${tag}\"}"
