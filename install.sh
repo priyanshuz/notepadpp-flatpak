@@ -10,10 +10,10 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 
 echo "==> Installing required Wine runtime extensions from Flathub..."
 flatpak install -y --or-update flathub \
-  org.freedesktop.Platform.Compat.i386//24.08 \
-  org.freedesktop.Platform.GL32.default//24.08 \
-  org.winehq.Wine.gecko/x86_64/stable-24.08 \
-  org.winehq.Wine.mono/x86_64/stable-24.08
+  org.freedesktop.Platform.Compat.i386//25.08 \
+  org.freedesktop.Platform.GL32.default//25.08 \
+  org.winehq.Wine.gecko/x86_64/stable-25.08 \
+  org.winehq.Wine.mono/x86_64/stable-25.08
 
 echo "==> Installing Notepad++..."
 flatpak install -y --user "$FLATPAKREF"

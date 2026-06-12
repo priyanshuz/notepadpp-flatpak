@@ -1,9 +1,9 @@
 app-id: com.notepadplusplus.NotepadPlusPlus
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 base: org.winehq.Wine
-base-version: stable-24.08
+base-version: stable-25.08
 command: notepadplusplus.sh
 
 inherit-extensions:
@@ -16,10 +16,10 @@ inherit-extensions:
 add-extensions:
   org.freedesktop.Platform.Compat.i386:
     directory: lib/i386-linux-gnu
-    version: '24.08'
+    version: '25.08'
   org.freedesktop.Platform.GL32.default:
     directory: lib/i386-linux-gnu/GL
-    version: '24.08'
+    version: '25.08'
     subdirectories: true
     autodelete: false
 
