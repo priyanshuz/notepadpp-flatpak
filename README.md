@@ -16,11 +16,11 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
 
 ## Requirements
 
-- Flatpak runtime `org.freedesktop.Platform//24.08`
-- Wine base `org.winehq.Wine//stable-24.08`
+- Flatpak runtime `org.freedesktop.Platform//25.08`
+- Wine base `org.winehq.Wine//stable-25.08`
 - Wine extensions:
-  - `org.freedesktop.Platform.Compat.i386//24.08` (32-bit compatibility)
-  - `org.freedesktop.Platform.GL32.default//24.08` (32-bit graphics)
+  - `org.freedesktop.Platform.Compat.i386//25.08` (32-bit compatibility)
+  - `org.freedesktop.Platform.GL32.default//25.08` (32-bit graphics)
   - `org.winehq.Wine.gecko` (IE engine)
   - `org.winehq.Wine.mono` (.NET runtime)
 
@@ -50,10 +50,10 @@ bash install.sh
 
 ```bash
 flatpak install -y flathub \
-  org.freedesktop.Platform.Compat.i386//24.08 \
-  org.freedesktop.Platform.GL32.default//24.08 \
-  org.winehq.Wine.gecko/x86_64/stable-24.08 \
-  org.winehq.Wine.mono/x86_64/stable-24.08
+  org.freedesktop.Platform.Compat.i386//25.08 \
+  org.freedesktop.Platform.GL32.default//25.08 \
+  org.winehq.Wine.gecko/x86_64/stable-25.08 \
+  org.winehq.Wine.mono/x86_64/stable-25.08
 ```
 
 2. Install the app:
