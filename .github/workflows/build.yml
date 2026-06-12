@@ -2,7 +2,7 @@ name: Build and Publish Flatpak
 
 on:
   push:
-    branches: [main]
+    branches: [main, test/wine-25.08-upgrade]
     tags:
       - 'v*'
   pull_request:
