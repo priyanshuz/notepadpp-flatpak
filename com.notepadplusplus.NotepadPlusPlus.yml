@@ -30,6 +30,7 @@ finish-args:
   - --filesystem=home
   - --filesystem=~/.fonts:ro
   - --filesystem=/run/host/fonts:ro
+  - --filesystem=/tmp
   - --persist=.wine
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
