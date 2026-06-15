@@ -10,7 +10,7 @@ export PATH="/app/bin:$PATH"
 export WINE_MONO_DIR="/app/share/wine/mono"
 export WINE_GECKO_DIR="/app/share/wine/gecko"
 
-NPP_EXE="$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe"
+NPP_EXE="/app/share/notepadplusplus/notepad++.exe"
 
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
@@ -65,29 +65,17 @@ fi
 cd "$HOME" 2>/dev/null || cd /var/data || true
 
 # First run setup
-if [ ! -f "$NPP_EXE" ]; then
+if [ ! -f "$WINEPREFIX/system.reg" ]; then
     echo "First run: setting up Wine prefix..."
 
     if ! wineboot --init; then
         echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
         exit 1
     fi
-    
-    # Wait for wineboot to finish
+
     wineserver --wait
-
-    echo "Installing Notepad++..."
-    if ! "$WINE" /app/share/notepadplusplus/npp-installer.exe /S; then
-        echo "Notepad++ installer failed to run." >&2
-        exit 1
-    fi
-
-    # Wait for installer to finish
-    wineserver --wait
-
     echo "Linking host fonts..."
     link_fonts
-
     wineserver --wait
     echo "Setup complete."
 fi

@@ -50,35 +50,23 @@ modules:
       - mkdir -p /app/lib/i386-linux-gnu/GL
       # Install launcher script
       - install -Dm755 notepadplusplus.sh /app/bin/notepadplusplus.sh
+        # Bundle portable Notepad++ files into the image
+        - install -d /app/share/notepadplusplus
+        - bsdtar -xf npp-portable.zip -C /app/share/notepadplusplus
       # Install desktop file
       - install -Dm644 com.notepadplusplus.NotepadPlusPlus.desktop
           /app/share/applications/com.notepadplusplus.NotepadPlusPlus.desktop
       # Install icon
       - install -Dm644 com.notepadplusplus.NotepadPlusPlus.png
           /app/share/icons/hicolor/256x256/apps/com.notepadplusplus.NotepadPlusPlus.png
-      # Install Notepad++ installer and support files
-      - install -Dm644 npp-installer.exe
-          /app/share/notepadplusplus/npp-installer.exe
-      - install -Dm644 dark-mode.reg
-          /app/share/notepadplusplus/dark-mode.reg
-      - install -Dm644 light-mode.reg
-          /app/share/notepadplusplus/light-mode.reg
 
     sources:
       - type: file
-        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.4/npp.8.9.6.4.Installer.x64.exe
-        sha256: cb902f8a9628324dbe5233b5202e716ea469720c9a1ac968007df2288e4ed2ea
-        dest-filename: npp-installer.exe
-      - type: file
-        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.4/npp.8.9.6.4.Installer.x64.exe.sig
-        sha256: a48acc964340c049972f9952064c94ccd7e569cb8a877a01161bc877fb784eea
-        dest-filename: npp-installer.exe.sig
+        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.4/npp.8.9.6.4.portable.x64.zip
+        sha256: 7b3618195757eed0d47debc28661fe998e68d3822a06a3621ee669ee358fc952
+        dest-filename: npp-portable.zip
       - type: file
         path: notepadplusplus.sh
-      - type: file
-        path: dark-mode.reg
-      - type: file
-        path: light-mode.reg
       - type: file
         path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file
