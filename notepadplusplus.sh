@@ -10,6 +10,8 @@ export PATH="/app/bin:$PATH"
 export WINE_MONO_DIR="/app/share/wine/mono"
 export WINE_GECKO_DIR="/app/share/wine/gecko"
 
+NPP_EXE="$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe"
+
 set_wine_dpi() {
     local dpi="$1"
     "$WINE" reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
@@ -147,6 +149,44 @@ PYEOF
     printf '%s\n' "$theme_mode" > "$stamp"
 }
 
+is_npp_running() {
+    # Prefer host-side process checks to avoid Wine IPC edge cases.
+    if pgrep -f 'notepad\+\+\.exe' >/dev/null 2>&1; then
+        return 0
+    fi
+
+    # Fallback: ask Wine for running tasks in this prefix.
+    if "$WINE" tasklist /FI "IMAGENAME eq notepad++.exe" 2>/dev/null | grep -qi 'notepad++.exe'; then
+        return 0
+    fi
+
+    return 1
+}
+
+build_npp_args() {
+    local arg win_path
+    NPP_ARGS=()
+
+    for arg in "$@"; do
+        # Preserve CLI flags as-is.
+        if [[ "$arg" == -* ]]; then
+            NPP_ARGS+=("$arg")
+            continue
+        fi
+
+        # Convert local paths so Wine receives canonical Windows paths.
+        if [ -e "$arg" ]; then
+            win_path=$(winepath -w "$arg" 2>/dev/null || true)
+            if [ -n "$win_path" ]; then
+                NPP_ARGS+=("$win_path")
+                continue
+            fi
+        fi
+
+        NPP_ARGS+=("$arg")
+    done
+}
+
 # Find wine64 first, fall back to wine
 if command -v wine64 >/dev/null 2>&1; then
     WINE="$(command -v wine64)"
@@ -161,7 +201,7 @@ fi
 cd "$HOME" 2>/dev/null || cd /var/data || true
 
 # First run setup
-if [ ! -f "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" ]; then
+if [ ! -f "$NPP_EXE" ]; then
     echo "First run: setting up Wine prefix..."
 
     if ! wineboot --init; then
@@ -192,4 +232,12 @@ sync_wine_theme
 sync_npp_config_theme
 apply_wine_dpi
 
-exec "$WINE" "$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe" "$@"
+build_npp_args "$@"
+
+# When opening files while another instance is already running, avoid DDE
+# handoff and force a separate process to prevent hangs.
+if [ "${#NPP_ARGS[@]}" -gt 0 ] && is_npp_running; then
+    exec "$WINE" "$NPP_EXE" -multiInst -nosession "${NPP_ARGS[@]}"
+fi
+
+exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
