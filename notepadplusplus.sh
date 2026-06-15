@@ -1,8 +1,8 @@
 #!/bin/bash
-export WINEPREFIX=/var/data/wine
-export WINEDEBUG=-all
-export WINEARCH=win64
-export WINEDLLOVERRIDES="winemenubuilder.exe=d"
+export WINEPREFIX="${WINEPREFIX:-/var/data/wine}"
+export WINEDEBUG="${WINEDEBUG:--all}"
+export WINEARCH="${WINEARCH:-win64}"
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export WINE_MONO_OVERRIDES="Microsoft.Xna.Framework,Microsoft.Xna.Framework.*"
 export PATH="/app/bin:$PATH"
 
