@@ -76,4 +76,23 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
 fi
 
 sync_npp_files
-exec "$WINE" "$NPP_EXE" "$@"
+
+NPP_ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == -* ]]; then
+        NPP_ARGS+=("$arg")
+        continue
+    fi
+
+    if [ -e "$arg" ]; then
+        win_path=$(winepath -w "$arg" 2>/dev/null || true)
+        if [ -n "$win_path" ]; then
+            NPP_ARGS+=("$win_path")
+            continue
+        fi
+    fi
+
+    NPP_ARGS+=("$arg")
+done
+
+exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
