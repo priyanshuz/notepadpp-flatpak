@@ -10,7 +10,9 @@ export PATH="/app/bin:$PATH"
 export WINE_MONO_DIR="/app/share/wine/mono"
 export WINE_GECKO_DIR="/app/share/wine/gecko"
 
-NPP_EXE="/app/share/notepadplusplus/notepad++.exe"
+NPP_SOURCE_DIR="/app/share/notepadplusplus"
+NPP_HOME_DIR="/var/data/notepad-plus-plus"
+NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
@@ -21,6 +23,32 @@ link_fonts() {
                 ln -sf "$font" "$font_dir/" 2>/dev/null || true
             done
     fi
+}
+
+sync_npp_files() {
+    local src="$NPP_SOURCE_DIR"
+    local dst="$NPP_HOME_DIR"
+    local xml_file
+
+    [ -d "$src" ] || return 0
+
+    mkdir -p "$dst"
+
+    # Remove stale links from previous versions and refresh with new files.
+    find "$dst" -type l -delete 2>/dev/null || true
+    cp -urs "$src"/* "$dst"/ 2>/dev/null || true
+
+    # Force-refresh updater XML and top-level XML config files.
+    if [ -d "$src/updater" ] && [ -d "$dst/updater" ]; then
+        rm -f "$dst/updater/gup.xml" 2>/dev/null || true
+        cp -f "$src/updater/gup.xml" "$dst/updater/" 2>/dev/null || true
+    fi
+
+    for xml_file in "$src"/*.xml; do
+        [ -e "$xml_file" ] || continue
+        rm -f "$dst/$(basename "$xml_file")" 2>/dev/null || true
+        cp -f "$xml_file" "$dst/" 2>/dev/null || true
+    done
 }
 
 is_npp_running() {
@@ -79,6 +107,8 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     wineserver --wait
     echo "Setup complete."
 fi
+
+sync_npp_files
 
 build_npp_args "$@"
 
