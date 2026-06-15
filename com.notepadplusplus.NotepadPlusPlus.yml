@@ -52,7 +52,7 @@ modules:
       - install -Dm755 notepadplusplus.sh /app/bin/notepadplusplus.sh
         # Bundle portable Notepad++ files into the image
         - install -d /app/share/notepadplusplus
-        - bsdtar -xf npp-portable.zip -C /app/share/notepadplusplus
+        - python3 -c "import zipfile; zipfile.ZipFile('npp-portable.zip').extractall('/app/share/notepadplusplus')"
       # Install desktop file
       - install -Dm644 com.notepadplusplus.NotepadPlusPlus.desktop
           /app/share/applications/com.notepadplusplus.NotepadPlusPlus.desktop
