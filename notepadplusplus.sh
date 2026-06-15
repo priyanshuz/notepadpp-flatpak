@@ -228,16 +228,15 @@ if [ ! -f "$NPP_EXE" ]; then
     echo "Setup complete."
 fi
 
-sync_wine_theme
-sync_npp_config_theme
-apply_wine_dpi
-
 build_npp_args "$@"
 
-# When opening files while another instance is already running, avoid DDE
-# handoff and force a separate process to prevent hangs.
+# For "Open With" file handoff when Notepad++ is already running, short-circuit
+# before any Wine registry/config writes to avoid blocking on prefix state.
 if [ "${#NPP_ARGS[@]}" -gt 0 ] && is_npp_running; then
     exec "$WINE" "$NPP_EXE" -multiInst -nosession "${NPP_ARGS[@]}"
 fi
 
+sync_wine_theme
+sync_npp_config_theme
+apply_wine_dpi
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
