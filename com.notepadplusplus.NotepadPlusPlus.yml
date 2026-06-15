@@ -35,8 +35,6 @@ finish-args:
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
   - --env=WINEARCH=win64
-  - --env=NPP_WINE_DPI=96
-  - --env=WINE_DARK_THEME=NO
   - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
   - --env=FONTCONFIG_PATH=/etc/fonts
   - --env=XDG_DATA_DIRS=/usr/share:/app/share
