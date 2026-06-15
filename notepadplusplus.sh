@@ -23,6 +23,10 @@ link_fonts() {
     fi
 }
 
+is_npp_running() {
+    "$WINE" tasklist /FI "IMAGENAME eq notepad++.exe" 2>/dev/null | grep -qi 'notepad++.exe'
+}
+
 build_npp_args() {
     local arg win_path
     NPP_ARGS=()
@@ -89,4 +93,12 @@ if [ ! -f "$NPP_EXE" ]; then
 fi
 
 build_npp_args "$@"
+
+# If a Notepad++ instance is already running, hand off file-open requests using
+# Wine start and return success so launchers do not treat it as a crash.
+if [ "${#NPP_ARGS[@]}" -gt 0 ] && is_npp_running; then
+    "$WINE" start /unix "$NPP_EXE" "${NPP_ARGS[@]}" >/dev/null 2>&1 || true
+    exit 0
+fi
+
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
