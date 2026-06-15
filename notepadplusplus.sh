@@ -77,8 +77,19 @@ fi
 
 sync_npp_files
 
+# Pass all arguments to Notepad++. The -multiInst flag is omitted to allow opening files in an existing instance.
 NPP_ARGS=()
 for arg in "$@"; do
+    case "$arg" in
+        file://*)
+            win_path=$(winepath -w "${arg#file://}" 2>/dev/null || true)
+            if [ -n "$win_path" ]; then
+                NPP_ARGS+=("$win_path")
+                continue
+            fi
+            ;;
+    esac
+
     if [[ "$arg" == -* ]]; then
         NPP_ARGS+=("$arg")
         continue
@@ -95,4 +106,5 @@ for arg in "$@"; do
     NPP_ARGS+=("$arg")
 done
 
+# Pass all arguments to Notepad++. The -multiInst flag is omitted to allow opening files in an existing instance.
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
