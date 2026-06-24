@@ -1,4 +1,12 @@
 #!/bin/bash
+# Ensure only a single instance runs to avoid multiple wineserver processes
+LOCKFILE="/tmp/npp_flatpak_instance.lock"
+exec 200>"$LOCKFILE"
+flock -n 200 || {
+    # Another instance is already running; exit to prevent multiple instances
+    exit 0
+}
+
 export WINEPREFIX="${WINEPREFIX:-/var/data/wine}"
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
