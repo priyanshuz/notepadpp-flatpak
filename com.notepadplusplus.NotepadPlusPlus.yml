@@ -69,3 +69,4 @@ modules:
         path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file
         path: com.notepadplusplus.NotepadPlusPlus.png
+  - --filesystem=var-data

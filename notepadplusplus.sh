@@ -1,6 +1,7 @@
 #!/bin/bash
 # Ensure only a single instance runs to avoid multiple wineserver processes
-LOCKFILE="/tmp/npp_flatpak_instance.lock"
+# Use a shared location that persists across Flatpak instances
+LOCKFILE="/var/data/npp_flatpak_instance.lock"
 exec 200>"$LOCKFILE"
 flock -n 200 || {
     # Another instance is already running; exit to prevent multiple instances
