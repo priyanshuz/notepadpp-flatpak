@@ -3,7 +3,8 @@
 # wineserver handles its own serialization. No external locking is needed.
 # Force the Wine prefix into the central .notepadpp directory.
 export WINEPREFIX="$HOME/.notepadpp/.wine"
-export WINEDEBUG="${WINEDEBUG:--all}"
+# For diagnostics, capture Wine thread/exception output. Override with WINEDEBUG=-all to silence.
+export WINEDEBUG="${WINEDEBUG:-+tid,+seh}"
 export WINEARCH="${WINEARCH:-win64}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export PATH="/app/bin:$PATH"
@@ -17,6 +18,15 @@ mkdir -p "$NPP_HOME_DIR"
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
+
+# Serialize wrapper launches so only one process initializes the Wine prefix
+# or starts notepad++.exe at a time. This rules out races without blocking
+# subsequent "Open With" invocations forever.
+LOCK_FILE="$NPP_HOME_DIR/.launcher.lock"
+exec 200>"$LOCK_FILE"
+log "Acquiring launcher lock..."
+flock -x 200
+log "Launcher lock acquired"
 
 log "===== launcher invoked ====="
 log "PID: $$"
@@ -182,4 +192,7 @@ done
 log "Final NPP_ARGS: ${NPP_ARGS[*]}"
 log "Executing: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 log "===== launching notepad++.exe ====="
-exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
+# Release the launcher lock before exec so the next invocation can acquire it
+# once this wineserver has registered the new process.
+flock -u 200
+exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}" 2>>"$LOG_FILE"
