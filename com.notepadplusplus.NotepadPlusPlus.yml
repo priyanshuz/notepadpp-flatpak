@@ -31,10 +31,9 @@ finish-args:
   - --filesystem=~/.fonts:ro
   - --filesystem=/run/host/fonts:ro
   - --filesystem=/tmp
-  - --filesystem=var-data
   - --persist=.wine
   - --allow=multiarch
-  - --env=WINEPREFIX=/var/data/wine
+  - --env=WINEPREFIX=/home/user/.wine
   - --env=WINEARCH=win64
   - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
   - --env=FONTCONFIG_PATH=/etc/fonts

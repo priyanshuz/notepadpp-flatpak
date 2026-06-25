@@ -1,20 +1,20 @@
 #!/bin/bash
 # Ensure only a single instance runs to avoid multiple wineserver processes
 # Use a shared location that persists across Flatpak instances
-LOCKFILE="/var/data/npp_flatpak_instance.lock"
+LOCKFILE="$HOME/.npp_flatpak_instance.lock"
 exec 200>"$LOCKFILE"
 flock -n 200 || {
     # Another instance is already running; continue to allow open with
 }
 
-export WINEPREFIX="${WINEPREFIX:-/var/data/wine}"
+export WINEPREFIX="${WINEPREFIX:-$HOME/.wine}"
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export PATH="/app/bin:$PATH"
 
 NPP_SOURCE_DIR="/app/share/notepadplusplus"
-NPP_HOME_DIR="/var/data/notepad-plus-plus"
+NPP_HOME_DIR="$HOME/notepad-plus-plus"
 NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
 link_fonts() {
@@ -65,7 +65,7 @@ else
 fi
 
 # Avoid noisy Wine cwd warnings when launched from odd host paths.
-cd "$HOME" 2>/dev/null || cd /var/data || true
+cd "$HOME" 2>/dev/null || true
 
 # First run setup
 if [ ! -f "$WINEPREFIX/system.reg" ]; then
