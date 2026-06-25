@@ -72,6 +72,8 @@ cd "$HOME" 2>/dev/null || true
 if [ ! -f "$WINEPREFIX/system.reg" ]; then
     echo "First run: setting up Wine prefix..."
 
+    mkdir -p "$WINEPREFIX"
+
     if ! wineboot --init; then
         echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
         exit 1
