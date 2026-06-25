@@ -4,8 +4,7 @@
 LOCKFILE="/var/data/npp_flatpak_instance.lock"
 exec 200>"$LOCKFILE"
 flock -n 200 || {
-    # Another instance is already running; exit to prevent multiple instances
-    exit 0
+    # Another instance is already running; continue to allow open with
 }
 
 export WINEPREFIX="${WINEPREFIX:-/var/data/wine}"
