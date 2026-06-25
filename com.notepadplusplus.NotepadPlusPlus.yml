@@ -31,9 +31,9 @@ finish-args:
   - --filesystem=~/.fonts:ro
   - --filesystem=/run/host/fonts:ro
   - --filesystem=/tmp
-  - --persist=.wine
+  - --persist=.notepadpp
   - --allow=multiarch
-  - --env=WINEPREFIX=/home/user/.wine
+  - --env=WINEPREFIX=/home/user/.notepadpp/.wine
   - --env=WINEARCH=win64
   - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
   - --env=FONTCONFIG_PATH=/etc/fonts
@@ -51,6 +51,11 @@ modules:
       # Bundle portable Notepad++ files into the image
       - install -d /app/share/notepadplusplus
       - python3 -c "import zipfile; zipfile.ZipFile('npp-portable.zip').extractall('/app/share/notepadplusplus')"
+      # Install theme registry files used by the launcher for dark/light detection
+      - install -Dm644 dark-mode.reg /app/share/notepadplusplus/dark-mode.reg
+      - install -Dm644 light-mode.reg /app/share/notepadplusplus/light-mode.reg
+      # Write a version stamp so the wrapper can skip re-syncing files on every launch
+      - echo "8.9.6.4" > /app/share/notepadplusplus/.version
       # Install desktop file
       - install -Dm644 com.notepadplusplus.NotepadPlusPlus.desktop
           /app/share/applications/com.notepadplusplus.NotepadPlusPlus.desktop
@@ -65,6 +70,10 @@ modules:
         dest-filename: npp-portable.zip
       - type: file
         path: notepadplusplus.sh
+      - type: file
+        path: dark-mode.reg
+      - type: file
+        path: light-mode.reg
       - type: file
         path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file

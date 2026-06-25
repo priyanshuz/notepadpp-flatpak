@@ -1,21 +1,15 @@
 #!/bin/bash
-# Ensure only a single instance runs to avoid multiple wineserver processes
-# Use a shared location that persists across Flatpak instances
-LOCKFILE="$HOME/.npp_flatpak_instance.lock"
-exec 200>"$LOCKFILE"
-flock -n 200 || {
-    # Another instance is already running; continue to allow open with
-    :
-}
-
-export WINEPREFIX="${WINEPREFIX:-$HOME/.wine}"
+# Notepad++ handles single-instance via its own COM server, and Wine's
+# wineserver handles its own serialization. No external locking is needed.
+# Force the Wine prefix into the central .notepadpp directory.
+export WINEPREFIX="$HOME/.notepadpp/.wine"
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export PATH="/app/bin:$PATH"
 
 NPP_SOURCE_DIR="/app/share/notepadplusplus"
-NPP_HOME_DIR="$HOME/notepad-plus-plus"
+NPP_HOME_DIR="$HOME/.notepadpp"
 NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
 link_fonts() {
@@ -29,6 +23,38 @@ link_fonts() {
     fi
 }
 
+apply_cjk_font_substitutes() {
+    local reg_file="$NPP_HOME_DIR/.cjk_fonts.reg"
+    local lang
+    lang="${LANG:-${LC_ALL:-${LC_CTYPE:-}}}"
+
+    case "$lang" in
+        zh_CN*|zh_SG*)
+            cat > "$reg_file" <<'EOF'
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes]
+"MS Shell Dlg"="Noto Sans CJK SC"
+"Tms Rmn"="Noto Sans CJK SC"
+EOF
+            ;;
+        zh_HK*|zh_MO*|zh_TW*)
+            cat > "$reg_file" <<'EOF'
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes]
+"MS Shell Dlg"="Noto Sans CJK TC"
+"Tms Rmn"="Noto Sans CJK TC"
+EOF
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    "$WINE" regedit "$reg_file" 2>/dev/null || true
+}
+
 sync_npp_files() {
     local src="$NPP_SOURCE_DIR"
     local dst="$NPP_HOME_DIR"
@@ -38,8 +64,8 @@ sync_npp_files() {
 
     mkdir -p "$dst"
 
-    # Remove stale links from previous versions and refresh with new files.
-    find "$dst" -type l -delete 2>/dev/null || true
+    # Only remove broken symlinks, then add/update links for new/existing files.
+    find -L "$dst" -maxdepth 2 -type l -delete 2>/dev/null || true
     cp -urs "$src"/* "$dst"/ 2>/dev/null || true
 
     # Force-refresh updater XML and top-level XML config files.
@@ -82,30 +108,40 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     wineserver --wait
     echo "Linking host fonts..."
     link_fonts
+    apply_cjk_font_substitutes
     wineserver --wait
     echo "Setup complete."
 fi
 
-sync_npp_files
+# Version-based update check: avoid re-syncing files on every launch.
+APP_VERSION_FILE="$NPP_SOURCE_DIR/.version"
+NPP_VERSION_FILE="$NPP_HOME_DIR/.version"
 
-# Pass all arguments to Notepad++. The -multiInst flag is omitted to allow opening files in an existing instance.
+if [ -f "$APP_VERSION_FILE" ] && [ -f "$NPP_VERSION_FILE" ]; then
+    if [ "$(cat "$APP_VERSION_FILE")" != "$(cat "$NPP_VERSION_FILE")" ]; then
+        sync_npp_files
+        cp -f "$APP_VERSION_FILE" "$NPP_VERSION_FILE" 2>/dev/null || true
+    fi
+else
+    sync_npp_files
+    [ -f "$APP_VERSION_FILE" ] && cp -f "$APP_VERSION_FILE" "$NPP_VERSION_FILE" 2>/dev/null || true
+fi
+
+# Detect dark/light mode from Notepad++ config.xml and apply the matching
+# Wine theme so non-client areas match the editor chrome.
+NPP_CFG="$NPP_HOME_DIR/config.xml"
+if [ -f "$NPP_CFG" ]; then
+    dark_mode_line=$(grep -o '<GUIConfig name="DarkMode"[^/]*/>' "$NPP_CFG" 2>/dev/null || true)
+    if [ -n "$dark_mode_line" ] && [[ "$dark_mode_line" == *'enable="yes"'* ]]; then
+        "$WINE" regedit /app/share/notepadplusplus/dark-mode.reg 2>/dev/null || true
+    else
+        "$WINE" regedit /app/share/notepadplusplus/light-mode.reg 2>/dev/null || true
+    fi
+fi
+
+# Convert existing file arguments to Windows paths; pass everything else through.
 NPP_ARGS=()
 for arg in "$@"; do
-    case "$arg" in
-        file://*)
-            win_path=$(winepath -w "${arg#file://}" 2>/dev/null || true)
-            if [ -n "$win_path" ]; then
-                NPP_ARGS+=("$win_path")
-                continue
-            fi
-            ;;
-    esac
-
-    if [[ "$arg" == -* ]]; then
-        NPP_ARGS+=("$arg")
-        continue
-    fi
-
     if [ -e "$arg" ]; then
         win_path=$(winepath -w "$arg" 2>/dev/null || true)
         if [ -n "$win_path" ]; then
@@ -113,9 +149,7 @@ for arg in "$@"; do
             continue
         fi
     fi
-
     NPP_ARGS+=("$arg")
 done
 
-# Pass all arguments to Notepad++. The -multiInst flag is omitted to allow opening files in an existing instance.
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
