@@ -31,6 +31,7 @@ finish-args:
   - --filesystem=~/.fonts:ro
   - --filesystem=/run/host/fonts:ro
   - --filesystem=/tmp
+  - --filesystem=var-data
   - --persist=.wine
   - --allow=multiarch
   - --env=WINEPREFIX=/var/data/wine
@@ -69,4 +70,3 @@ modules:
         path: com.notepadplusplus.NotepadPlusPlus.desktop
       - type: file
         path: com.notepadplusplus.NotepadPlusPlus.png
-  - --filesystem=var-data
