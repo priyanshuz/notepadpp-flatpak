@@ -12,6 +12,19 @@ NPP_SOURCE_DIR="/app/share/notepadplusplus"
 NPP_HOME_DIR="$HOME/.notepadpp"
 NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
+LOG_FILE="$NPP_HOME_DIR/launcher.log"
+mkdir -p "$NPP_HOME_DIR"
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
+}
+
+log "===== launcher invoked ====="
+log "PID: $$"
+log "PPID: $PPID"
+log "Arguments ($#): $*"
+log "WINEPREFIX: $WINEPREFIX"
+log "WINE: ${WINE:-not-yet-detected}"
+
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
     mkdir -p "$font_dir"
@@ -90,17 +103,20 @@ else
     echo "Wine binary not found in application runtime." >&2
     exit 1
 fi
+log "Wine binary resolved to: $WINE"
 
 # Avoid noisy Wine cwd warnings when launched from odd host paths.
 cd "$HOME" 2>/dev/null || true
 
 # First run setup
 if [ ! -f "$WINEPREFIX/system.reg" ]; then
+    log "First run: setting up Wine prefix at $WINEPREFIX"
     echo "First run: setting up Wine prefix..."
 
     mkdir -p "$WINEPREFIX"
 
     if ! wineboot --init; then
+        log "ERROR: wineboot --init failed"
         echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
         exit 1
     fi
@@ -111,6 +127,9 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     apply_cjk_font_substitutes
     wineserver --wait
     echo "Setup complete."
+    log "First run setup complete"
+else
+    log "Wine prefix already exists at $WINEPREFIX"
 fi
 
 # Version-based update check: avoid re-syncing files on every launch.
@@ -139,11 +158,19 @@ if [ -f "$NPP_CFG" ]; then
     fi
 fi
 
+# Detect if Notepad++ is already running in this prefix.
+NPP_RUNNING=0
+if [ -S "$WINEPREFIX/wineserver.sock" ] || pgrep -f "notepad\\+\\+.exe" >/dev/null 2>&1; then
+    NPP_RUNNING=1
+fi
+log "Notepad++ already running: $NPP_RUNNING"
+
 # Convert existing file arguments to Windows paths; pass everything else through.
 NPP_ARGS=()
 for arg in "$@"; do
     if [ -e "$arg" ]; then
         win_path=$(winepath -w "$arg" 2>/dev/null || true)
+        log "winepath conversion: arg='$arg' -> win_path='$win_path'"
         if [ -n "$win_path" ]; then
             NPP_ARGS+=("$win_path")
             continue
@@ -152,4 +179,7 @@ for arg in "$@"; do
     NPP_ARGS+=("$arg")
 done
 
+log "Final NPP_ARGS: ${NPP_ARGS[*]}"
+log "Executing: $WINE $NPP_EXE ${NPP_ARGS[*]}"
+log "===== launching notepad++.exe ====="
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
