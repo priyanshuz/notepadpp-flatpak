@@ -9,6 +9,12 @@ export WINEARCH="${WINEARCH:-win64}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export PATH="/app/bin:$PATH"
 
+# DXVK settings borrowed from the AppImage wrapper to keep Wine/DirectX
+# logging and caches quiet.
+export DXVK_HUD="${DXVK_HUD:-0}"
+export DXVK_LOG_LEVEL="${DXVK_LOG_LEVEL:-none}"
+export DXVK_STATE_CACHE="${DXVK_STATE_CACHE:-0}"
+
 NPP_SOURCE_DIR="/app/share/notepadplusplus"
 NPP_HOME_DIR="$HOME/.notepadpp"
 NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
@@ -150,6 +156,15 @@ if [ -f "$NPP_CFG" ]; then
         "$WINE" regedit /app/share/notepadplusplus/light-mode.reg 2>/dev/null || true
     fi
 fi
+
+# Allow launching Wine tools directly from the Flatpak command line, e.g.:
+# flatpak run com.notepadplusplus.NotepadPlusPlus winecfg
+case "$1" in
+    winecfg|wineboot|regedit|cmd|taskmgr|winefile|winemine|control)
+        "$WINE" "$1"
+        exit $?
+        ;;
+esac
 
 # Convert existing file arguments to Windows paths; pass everything else through.
 NPP_ARGS=()

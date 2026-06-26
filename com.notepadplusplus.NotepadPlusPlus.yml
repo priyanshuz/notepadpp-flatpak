@@ -8,8 +8,6 @@ command: notepadplusplus.sh
 
 inherit-extensions:
   - org.freedesktop.Platform.GL32
-  - org.winehq.Wine.gecko
-  - org.winehq.Wine.mono
 
 add-extensions:
   org.freedesktop.Platform.Compat.i386:
