@@ -137,22 +137,23 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     apply_cjk_font_substitutes
     wineserver --wait
 
-    # The AppImage's pre-built prefix does not register the RpcSs service.
-    # With org.winehq.Wine, wineboot registers RpcSs and Wine then tries (and
-    # fails) to start it on every launch, which crashes Notepad++'s single-
-    # instance COM path. Remove the service entry so Wine behaves like the
-    # AppImage prefix and treats the missing service as non-fatal.
-    if [ -f "$WINEPREFIX/system.reg" ]; then
-        log "Removing RpcSs service entry from system.reg"
-        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]/,/^\[/ { /^\[/!d; }' "$WINEPREFIX/system.reg"
-        # Also remove the empty section header line if it is now orphaned
-        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]$/d' "$WINEPREFIX/system.reg"
-    fi
-
     echo "Setup complete."
     log "First run setup complete"
 else
     log "Wine prefix already exists at $WINEPREFIX"
+fi
+
+# The AppImage's pre-built prefix does not register the RpcSs service.
+# With org.winehq.Wine, wineboot registers RpcSs and Wine then tries (and
+# fails) to start it on every launch, which crashes Notepad++'s single-
+# instance COM path. Strip the service entry before every launch so Wine
+# behaves like the AppImage prefix and treats the missing service as non-fatal.
+if [ -f "$WINEPREFIX/system.reg" ]; then
+    if grep -q '^\[System\\ControlSet001\\Services\\RpcSs\]' "$WINEPREFIX/system.reg"; then
+        log "Removing RpcSs service entry from system.reg"
+        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]/,/^\[/ { /^\[/!d; }' "$WINEPREFIX/system.reg"
+        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]$/d' "$WINEPREFIX/system.reg"
+    fi
 fi
 
 # Version-based update check: avoid re-syncing files on every launch.
