@@ -6,7 +6,7 @@
 export WINEPREFIX="$HOME/.notepadpp/.wine"
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
-export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;mscoree,mshtml=}"
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;mscoree,mshtml=d}"
 export PATH="/app/bin:$PATH"
 
 # DXVK settings borrowed from the AppImage wrapper to keep Wine/DirectX
@@ -19,15 +19,7 @@ NPP_SOURCE_DIR="/app/share/notepadplusplus"
 NPP_HOME_DIR="$HOME/.notepadpp"
 NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
-LOG_FILE="$NPP_HOME_DIR/launcher.log"
 mkdir -p "$NPP_HOME_DIR"
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
-}
-
-log "===== launcher invoked ====="
-log "Arguments ($#): $*"
-log "WINEPREFIX: $WINEPREFIX"
 
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
@@ -72,6 +64,16 @@ EOF
     "$WINE" regedit "$reg_file" 2>/dev/null || true
 }
 
+# Find wine64 first, fall back to wine
+if command -v wine64 >/dev/null 2>&1; then
+    WINE="$(command -v wine64)"
+elif command -v wine >/dev/null 2>&1; then
+    WINE="$(command -v wine)"
+else
+    echo "Wine binary not found in application runtime." >&2
+    exit 1
+fi
+
 sync_npp_files() {
     local src="$NPP_SOURCE_DIR"
     local dst="$NPP_HOME_DIR"
@@ -97,17 +99,6 @@ sync_npp_files() {
         cp -f "$xml_file" "$dst/" 2>/dev/null || true
     done
 }
-
-# Find wine64 first, fall back to wine
-if command -v wine64 >/dev/null 2>&1; then
-    WINE="$(command -v wine64)"
-elif command -v wine >/dev/null 2>&1; then
-    WINE="$(command -v wine)"
-else
-    echo "Wine binary not found in application runtime." >&2
-    exit 1
-fi
-log "Wine: $WINE"
 
 # Avoid noisy Wine cwd warnings when launched from odd host paths.
 cd "$HOME" 2>/dev/null || true
@@ -177,8 +168,6 @@ for arg in "$@"; do
     fi
     NPP_ARGS+=("$arg")
 done
-
-log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 
 # If a wineserver is already running, another Notepad++ instance is active
 # and this invocation is likely an "Open With" handoff. Keep the shell alive
