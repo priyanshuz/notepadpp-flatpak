@@ -21,8 +21,6 @@ Unofficial Flatpak packaging of [Notepad++](https://notepad-plus-plus.org/) for 
 - Wine extensions:
   - `org.freedesktop.Platform.Compat.i386//25.08` (32-bit compatibility)
   - `org.freedesktop.Platform.GL32.default//25.08` (32-bit graphics)
-  - `org.winehq.Wine.gecko` (IE engine)
-  - `org.winehq.Wine.mono` (.NET runtime)
 
 With the `.flatpakref` install path below, Flatpak resolves these automatically.
 
@@ -51,9 +49,7 @@ bash install.sh
 ```bash
 flatpak install -y flathub \
   org.freedesktop.Platform.Compat.i386//25.08 \
-  org.freedesktop.Platform.GL32.default//25.08 \
-  org.winehq.Wine.gecko/x86_64/stable-25.08 \
-  org.winehq.Wine.mono/x86_64/stable-25.08
+  org.freedesktop.Platform.GL32.default//25.08
 ```
 
 2. Install the app:
@@ -65,8 +61,8 @@ flatpak install --user https://priyanshuz.github.io/notepadpp-flatpak/com.notepa
 ### First launch
 
 The first launch will:
-1. Initialise the Wine prefix.
-2. Silently install Notepad++ into the prefix.
+1. Initialise the Wine prefix in `~/.notepadpp/.wine`.
+2. Sync the portable Notepad++ files into `~/.notepadpp`.
 3. Link host fonts into the Wine font directory.
 4. Apply your configured theme and preferences.
 
@@ -76,39 +72,16 @@ Subsequent launches skip all of the above and start Notepad++ directly.
 
 ## Configuration
 
-All options are exposed as environment variables. You can set them using [Flatseal](https://flathub.org/apps/com.github.tchx84.Flatseal) or via the command line:
-
-```bash
-flatpak override --user --env=OPTION=value com.notepadplusplus.NotepadPlusPlus
-```
-
-### Available options
-
-| Variable | Default | Description |
-|---|---|---|
-| `NPP_WINE_DPI` | `96` | Wine DPI for UI scaling. Increase for HiDPI displays (e.g. `144`, `192`, `240`). |
-| `WINE_DARK_THEME` | `NO` | Set to `YES` to enable dark mode and the Obsidian syntax theme. |
-
-### DPI guide
-
-| Display type | Suggested value |
-|---|---|
-| 1080p standard | `96` |
-| 1440p / 24" | `120` |
-| 4K / HiDPI | `192`–`240` |
+Notepad++ stores its settings in `~/.notepadpp`. The Wine prefix is `~/.notepadpp/.wine` and the portable Notepad++ files live directly in `~/.notepadpp`.
 
 ### Dark mode
 
-Setting `WINE_DARK_THEME=YES`:
-- Applies a dark colour palette to Wine system UI (title bars, menus, dialogs).
-- Enables **Dark mode** in Notepad++ Preferences → Dark Mode (Black tone).
-- Sets the **Obsidian** syntax highlighting theme in Style Configurator.
+The wrapper reads Notepad++'s own `config.xml` and applies the matching Wine system theme automatically:
 
-Setting `WINE_DARK_THEME=NO` (default):
-- Restores the standard light Windows colour palette.
-- Switches Notepad++ back to Light mode.
+- If **Dark mode** is enabled in Notepad++ (`Preferences → Dark Mode`), the Wine non-client areas (title bars, menus, dialogs) are switched to a dark palette.
+- If **Light mode** is enabled, the standard light Windows palette is used.
 
-The theme is only re-applied when the value changes, so switching in Flatseal and restarting the app is all that's needed.
+Switch the mode inside Notepad++ and restart the app; the Wine theme will follow on the next launch.
 
 ---
 
@@ -121,7 +94,7 @@ These preferences are set automatically and do not change on subsequent launches
 | Preferences → General → Hide right shortcuts | Enabled |
 | Preferences → Toolbar | Fluent UI: small |
 | Preferences → Editing 1 → Enable smooth font | Enabled |
-| Dark Mode | Light (follows `WINE_DARK_THEME`) |
+| Dark Mode | Follows Notepad++ `config.xml` |
 | Style Configurator theme (dark mode only) | Obsidian |
 
 ---
@@ -131,7 +104,7 @@ These preferences are set automatically and do not change on subsequent launches
 To start fresh (re-runs first-launch setup):
 
 ```bash
-rm -rf ~/.var/app/com.notepadplusplus.NotepadPlusPlus/data/wine
+rm -rf ~/.notepadpp
 flatpak run com.notepadplusplus.NotepadPlusPlus
 ```
 
@@ -140,6 +113,8 @@ flatpak run com.notepadplusplus.NotepadPlusPlus
 ## Fonts
 
 Host system fonts are automatically linked into the Wine font directory on first launch via `/run/host/fonts` (the standard Flatpak host font path). User fonts from `~/.fonts` are also accessible.
+
+CJK font substitutes are applied automatically on first launch when a Chinese locale is detected.
 
 ---
 
@@ -195,18 +170,36 @@ This repository is configured to auto-publish whenever upstream Notepad++ releas
 
 ---
 
+## Wine tools
+
+You can launch Wine tools through the same Flatpak entry point:
+
+```bash
+flatpak run com.notepadplusplus.NotepadPlusPlus winecfg
+flatpak run com.notepadplusplus.NotepadPlusPlus regedit
+flatpak run com.notepadplusplus.NotepadPlusPlus taskmgr
+flatpak run com.notepadplusplus.NotepadPlusPlus winefile
+flatpak run com.notepadplusplus.NotepadPlusPlus control
+```
+
+---
+
 ## Files
 
 | File | Purpose |
 |---|---|
 | `com.notepadplusplus.NotepadPlusPlus.yml` | Flatpak manifest |
-| `notepadplusplus.sh` | Launch script (DPI, theme, first-run setup) |
+| `notepadplusplus.sh` | Launch script (theme sync, first-run setup, Wine tools) |
 | `dark-mode.reg` | Wine registry patch for dark UI colours |
 | `light-mode.reg` | Wine registry patch for light UI colours |
 | `com.notepadplusplus.NotepadPlusPlus.desktop` | Desktop entry |
 | `com.notepadplusplus.NotepadPlusPlus.png` | Application icon |
 
 ---
+
+## Single-instance and "Open With"
+
+Notepad++ relies on Wine's built-in single-instance mechanism (a Win32 mutex via the wineserver). The wrapper does not use any external locking, so "Open With" from file managers and command-line file arguments work reliably with a running instance.
 
 ## License
 

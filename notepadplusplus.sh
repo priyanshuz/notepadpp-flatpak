@@ -1,46 +1,25 @@
 #!/bin/bash
-export WINEPREFIX=/var/data/wine
-export WINEDEBUG=-all
-export WINEARCH=win64
-export WINEDLLOVERRIDES="winemenubuilder.exe=d"
-export WINE_MONO_OVERRIDES="Microsoft.Xna.Framework,Microsoft.Xna.Framework.*"
+# Notepad++ uses a Win32 mutex (via wineserver) for single-instance.
+# No external locking or process detection is needed — in fact, external
+# locks can interfere with Wine's internal synchronization.
+# Force the Wine prefix into the central .notepadpp directory.
+export WINEPREFIX="$HOME/.notepadpp/.wine"
+export WINEDEBUG="${WINEDEBUG:--all}"
+export WINEARCH="${WINEARCH:-win64}"
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;mscoree,mshtml=d}"
 export PATH="/app/bin:$PATH"
 
-# Point Wine to bundled Mono and Gecko
-export WINE_MONO_DIR="/app/share/wine/mono"
-export WINE_GECKO_DIR="/app/share/wine/gecko"
+# DXVK settings borrowed from the AppImage wrapper to keep Wine/DirectX
+# logging and caches quiet.
+export DXVK_HUD="${DXVK_HUD:-0}"
+export DXVK_LOG_LEVEL="${DXVK_LOG_LEVEL:-none}"
+export DXVK_STATE_CACHE="${DXVK_STATE_CACHE:-0}"
 
-NPP_EXE="$WINEPREFIX/drive_c/Program Files/Notepad++/notepad++.exe"
+NPP_SOURCE_DIR="/app/share/notepadplusplus"
+NPP_HOME_DIR="$HOME/.notepadpp"
+NPP_EXE="$NPP_HOME_DIR/notepad++.exe"
 
-set_wine_dpi() {
-    local dpi="$1"
-    "$WINE" reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
-    "$WINE" reg add "HKCU\\Software\\Wine\\Fonts" /v LogPixels /t REG_DWORD /d "$dpi" /f >/dev/null 2>&1 || true
-}
-
-normalize_dark_theme() {
-    case "${WINE_DARK_THEME:-NO}" in
-        YES|yes|Yes|TRUE|true|True|1|ON|on|On)
-            echo "YES"
-            ;;
-        *)
-            echo "NO"
-            ;;
-    esac
-}
-
-apply_wine_dpi() {
-    local dpi="${NPP_WINE_DPI:-96}"
-
-    if ! [ "$dpi" -eq "$dpi" ] 2>/dev/null; then
-        dpi=96
-    fi
-
-    if [ "$dpi" -lt 96 ] 2>/dev/null; then dpi=96; fi
-    if [ "$dpi" -gt 288 ] 2>/dev/null; then dpi=288; fi
-
-    set_wine_dpi "$dpi"
-}
+mkdir -p "$NPP_HOME_DIR"
 
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
@@ -53,138 +32,36 @@ link_fonts() {
     fi
 }
 
-sync_wine_theme() {
-    local theme_mode theme_stamp reg_file
-    theme_mode=$(normalize_dark_theme)
-    theme_stamp="$WINEPREFIX/.notepadplusplus-theme"
+apply_cjk_font_substitutes() {
+    local reg_file="$NPP_HOME_DIR/.cjk_fonts.reg"
+    local lang
+    lang="${LANG:-${LC_ALL:-${LC_CTYPE:-}}}"
 
-    if [ "$theme_mode" = "YES" ]; then
-        reg_file="/app/share/notepadplusplus/dark-mode.reg"
-    else
-        reg_file="/app/share/notepadplusplus/light-mode.reg"
-    fi
+    case "$lang" in
+        zh_CN*|zh_SG*)
+            cat > "$reg_file" <<'EOF'
+Windows Registry Editor Version 5.00
 
-    if [ -f "$theme_stamp" ] && [ "$(cat "$theme_stamp" 2>/dev/null)" = "$theme_mode" ]; then
-        return
-    fi
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes]
+"MS Shell Dlg"="Noto Sans CJK SC"
+"Tms Rmn"="Noto Sans CJK SC"
+EOF
+            ;;
+        zh_HK*|zh_MO*|zh_TW*)
+            cat > "$reg_file" <<'EOF'
+Windows Registry Editor Version 5.00
 
-    echo "Applying ${theme_mode,,} theme registry..."
-    if ! "$WINE" regedit "$reg_file"; then
-        echo "Warning: failed to apply ${theme_mode,,} theme registry." >&2
-        return
-    fi
-    printf '%s\n' "$theme_mode" > "$theme_stamp"
-}
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes]
+"MS Shell Dlg"="Noto Sans CJK TC"
+"Tms Rmn"="Noto Sans CJK TC"
+EOF
+            ;;
+        *)
+            return 0
+            ;;
+    esac
 
-sync_npp_config_theme() {
-    local theme_mode config_file stamp
-    theme_mode=$(normalize_dark_theme)
-    config_file=$(find "$WINEPREFIX/drive_c/users" -maxdepth 5 -type f -path '*/AppData/Roaming/Notepad++/config.xml' 2>/dev/null | head -n1)
-    stamp="$WINEPREFIX/.notepadplusplus-npp-config"
-
-    [ -n "$config_file" ] || return
-    [ -f "$config_file" ] || return
-
-    # Skip if config was already patched for the current theme.
-    if [ -f "$stamp" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$theme_mode" ]; then
-        return
-    fi
-
-    if ! python3 - "$config_file" "$theme_mode" <<'PYEOF'
-import sys, re
-
-config_file = sys.argv[1]
-theme_mode  = sys.argv[2].upper()
-
-with open(config_file, 'r', encoding='utf-8') as f:
-    content = f.read()
-
-def set_attr(text, tag_name, attr, value):
-    """Set attr="value" only within the GUIConfig tag with the given name."""
-    def replacer(m):
-        tag = m.group(0)
-        tag = re.sub(r'(?<=' + attr + r'=")[^"]*(?=")', value, tag)
-        return tag
-    return re.sub(
-        r'<GUIConfig name="' + re.escape(tag_name) + r'"[^>]*/?>',
-        replacer, text
-    )
-
-def set_text_content(text, tag_name, value):
-    """Replace text content of <GUIConfig name="TAG">...</GUIConfig>."""
-    return re.sub(
-        r'(<GUIConfig name="' + re.escape(tag_name) + r'"[^>]*>)[^<]*(</GUIConfig>)',
-        lambda m: m.group(1) + value + m.group(2),
-        text
-    )
-
-# ── Always-on preferences ─────────────────────────────────────────────────────
-# Hide right shortcuts in menu bar
-content = set_attr(content, 'MISC', 'hideMenuRightShortcuts', 'yes')
-
-# Fluent UI: small toolbar
-content = set_text_content(content, 'ToolBar', 'fluent:small')
-
-# Enable smooth font
-content = set_attr(content, 'ScintillaPrimaryView', 'smoothFont', 'yes')
-
-# ── Theme ─────────────────────────────────────────────────────────────────────
-if '<GUIConfig name="DarkMode"' in content:
-    if theme_mode == 'YES':
-        content = set_attr(content, 'DarkMode', 'enable',           'yes')
-        content = set_attr(content, 'DarkMode', 'colorTone',         '0')
-        content = set_attr(content, 'DarkMode', 'enableWindowsMode', 'no')
-        content = set_attr(content, 'DarkMode', 'darkThemeName',     'Obsidian.xml')
-    else:
-        content = set_attr(content, 'DarkMode', 'enable',            'no')
-        content = set_attr(content, 'DarkMode', 'enableWindowsMode', 'no')
-
-with open(config_file, 'w', encoding='utf-8') as f:
-    f.write(content)
-PYEOF
-    then
-        echo "Warning: failed to patch Notepad++ config.xml." >&2
-        return
-    fi
-    printf '%s\n' "$theme_mode" > "$stamp"
-}
-
-is_npp_running() {
-    # Prefer host-side process checks to avoid Wine IPC edge cases.
-    if pgrep -f 'notepad\+\+\.exe' >/dev/null 2>&1; then
-        return 0
-    fi
-
-    # Fallback: ask Wine for running tasks in this prefix.
-    if "$WINE" tasklist /FI "IMAGENAME eq notepad++.exe" 2>/dev/null | grep -qi 'notepad++.exe'; then
-        return 0
-    fi
-
-    return 1
-}
-
-build_npp_args() {
-    local arg win_path
-    NPP_ARGS=()
-
-    for arg in "$@"; do
-        # Preserve CLI flags as-is.
-        if [[ "$arg" == -* ]]; then
-            NPP_ARGS+=("$arg")
-            continue
-        fi
-
-        # Convert local paths so Wine receives canonical Windows paths.
-        if [ -e "$arg" ]; then
-            win_path=$(winepath -w "$arg" 2>/dev/null || true)
-            if [ -n "$win_path" ]; then
-                NPP_ARGS+=("$win_path")
-                continue
-            fi
-        fi
-
-        NPP_ARGS+=("$arg")
-    done
+    "$WINE" regedit "$reg_file" 2>/dev/null || true
 }
 
 # Find wine64 first, fall back to wine
@@ -197,47 +74,108 @@ else
     exit 1
 fi
 
+sync_npp_files() {
+    local src="$NPP_SOURCE_DIR"
+    local dst="$NPP_HOME_DIR"
+    local xml_file
+
+    [ -d "$src" ] || return 0
+
+    mkdir -p "$dst"
+
+    # Only remove broken symlinks, then add/update links for new/existing files.
+    find -L "$dst" -maxdepth 2 -type l -delete 2>/dev/null || true
+    cp -urs "$src"/* "$dst"/ 2>/dev/null || true
+
+    # Force-refresh updater XML and top-level XML config files.
+    if [ -d "$src/updater" ] && [ -d "$dst/updater" ]; then
+        rm -f "$dst/updater/gup.xml" 2>/dev/null || true
+        cp -f "$src/updater/gup.xml" "$dst/updater/" 2>/dev/null || true
+    fi
+
+    for xml_file in "$src"/*.xml; do
+        [ -e "$xml_file" ] || continue
+        rm -f "$dst/$(basename "$xml_file")" 2>/dev/null || true
+        cp -f "$xml_file" "$dst/" 2>/dev/null || true
+    done
+}
+
 # Avoid noisy Wine cwd warnings when launched from odd host paths.
-cd "$HOME" 2>/dev/null || cd /var/data || true
+cd "$HOME" 2>/dev/null || true
 
 # First run setup
-if [ ! -f "$NPP_EXE" ]; then
+if [ ! -f "$WINEPREFIX/system.reg" ]; then
     echo "First run: setting up Wine prefix..."
+
+    mkdir -p "$WINEPREFIX"
 
     if ! wineboot --init; then
         echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
         exit 1
     fi
-    
-    # Wait for wineboot to finish
+
     wineserver --wait
-
-    echo "Installing Notepad++..."
-    if ! "$WINE" /app/share/notepadplusplus/npp-installer.exe /S; then
-        echo "Notepad++ installer failed to run." >&2
-        exit 1
-    fi
-
-    # Wait for installer to finish
-    wineserver --wait
-
     echo "Linking host fonts..."
     link_fonts
-
+    apply_cjk_font_substitutes
     wineserver --wait
     echo "Setup complete."
 fi
 
-build_npp_args "$@"
+# Version-based update check: avoid re-syncing files on every launch.
+APP_VERSION_FILE="$NPP_SOURCE_DIR/.version"
+NPP_VERSION_FILE="$NPP_HOME_DIR/.version"
 
-# For "Open With" file handoff when Notepad++ is already running, short-circuit
-# before any Wine registry/config writes to avoid blocking on prefix state.
-if [ "${#NPP_ARGS[@]}" -gt 0 ] && is_npp_running; then
-    exec "$WINE" "$NPP_EXE" -multiInst -nosession "${NPP_ARGS[@]}"
+if [ -f "$APP_VERSION_FILE" ] && [ -f "$NPP_VERSION_FILE" ]; then
+    if [ "$(cat "$APP_VERSION_FILE")" != "$(cat "$NPP_VERSION_FILE")" ]; then
+        sync_npp_files
+        cp -f "$APP_VERSION_FILE" "$NPP_VERSION_FILE" 2>/dev/null || true
+    fi
+else
+    sync_npp_files
+    [ -f "$APP_VERSION_FILE" ] && cp -f "$APP_VERSION_FILE" "$NPP_VERSION_FILE" 2>/dev/null || true
 fi
 
-sync_wine_theme
-sync_npp_config_theme
-apply_wine_dpi
+# Detect dark/light mode from Notepad++ config.xml and apply the matching
+# Wine theme so non-client areas match the editor chrome.
+NPP_CFG="$NPP_HOME_DIR/config.xml"
+if [ -f "$NPP_CFG" ]; then
+    dark_mode_line=$(grep -o '<GUIConfig name="DarkMode"[^/]*/>' "$NPP_CFG" 2>/dev/null || true)
+    if [ -n "$dark_mode_line" ] && [[ "$dark_mode_line" == *'enable="yes"'* ]]; then
+        "$WINE" regedit /app/share/notepadplusplus/dark-mode.reg 2>/dev/null || true
+    else
+        "$WINE" regedit /app/share/notepadplusplus/light-mode.reg 2>/dev/null || true
+    fi
+fi
 
+# Allow launching Wine tools directly from the Flatpak command line, e.g.:
+# flatpak run com.notepadplusplus.NotepadPlusPlus winecfg
+case "$1" in
+    winecfg|wineboot|regedit|cmd|taskmgr|winefile|winemine|control)
+        exec "$WINE" "$1"
+        ;;
+esac
+
+# Convert existing file arguments to Windows paths; pass everything else through.
+NPP_ARGS=()
+for arg in "$@"; do
+    if [ -e "$arg" ]; then
+        win_path=$(winepath -w "$arg" 2>/dev/null || true)
+        if [ -n "$win_path" ]; then
+            NPP_ARGS+=("$win_path")
+            continue
+        fi
+    fi
+    NPP_ARGS+=("$arg")
+done
+
+# If a wineserver is already running, another Notepad++ instance is active
+# and this invocation is likely an "Open With" handoff. Keep the shell alive
+# so wineserver stays up long enough for the handoff to complete safely.
+# For the first launch, replace the shell with Wine so no shell remains to
+# host defunct Wine children, which prevents bwrap from lingering.
+if pgrep -x "wineserver" >/dev/null 2>&1; then
+    "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
+    exit $?
+fi
 exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"

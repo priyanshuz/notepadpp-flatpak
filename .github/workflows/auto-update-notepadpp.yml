@@ -2,7 +2,7 @@ name: Auto Update Notepad++
 
 on:
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '17 4 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -46,26 +46,21 @@ jobs:
 
           tmpdir=$(mktemp -d)
           base_url="https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v${latest_version}"
-          exe_name="npp.${latest_version}.Installer.x64.exe"
-          sig_name="${exe_name}.sig"
+          zip_name="npp.${latest_version}.portable.x64.zip"
 
-          curl -fsSL -o "$tmpdir/$exe_name" "$base_url/$exe_name"
-          curl -fsSL -o "$tmpdir/$sig_name" "$base_url/$sig_name"
+          curl -fsSL -o "$tmpdir/$zip_name" "$base_url/$zip_name"
 
-          exe_sha=$(sha256sum "$tmpdir/$exe_name" | awk '{print $1}')
-          sig_sha=$(sha256sum "$tmpdir/$sig_name" | awk '{print $1}')
+          zip_sha=$(sha256sum "$tmpdir/$zip_name" | awk '{print $1}')
 
           sed -E \
-            "s#(releases/download/v)${current_version}(/npp\\.)${current_version}(\\.Installer\\.x64\\.exe(\\.sig)?)#\\1${latest_version}\\2${latest_version}\\3#g" \
+            "s#(releases/download/v)${current_version}(/npp\\.)${current_version}(\\.portable\\.x64\\.zip)#\\1${latest_version}\\2${latest_version}\\3#g" \
             "$MANIFEST" > "$MANIFEST.tmp"
 
-          awk -v s1="$exe_sha" -v s2="$sig_sha" '
+          awk -v s1="$zip_sha" '
             /^[[:space:]]*sha256:/ {
               count++
               if (count == 1) {
                 sub(/[a-f0-9]{64}/, s1)
-              } else if (count == 2) {
-                sub(/[a-f0-9]{64}/, s2)
               }
             }
             { print }
