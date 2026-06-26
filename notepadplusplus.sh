@@ -125,19 +125,6 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     echo "Setup complete."
 fi
 
-# The AppImage's pre-built prefix does not register the RpcSs service.
-# With org.winehq.Wine, wineboot registers RpcSs and Wine then tries (and
-# fails) to start it, which crashes Notepad++'s single-instance COM path.
-# Strip the service entry before every launch so Wine behaves like the
-# AppImage prefix and treats the missing service as non-fatal.
-if [ -f "$WINEPREFIX/system.reg" ]; then
-    if grep -q '^\[System\\ControlSet001\\Services\\RpcSs\]' "$WINEPREFIX/system.reg"; then
-        log "Removing RpcSs service entry from system.reg"
-        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]/,/^\[/ { /^\[/!d; }' "$WINEPREFIX/system.reg"
-        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]$/d' "$WINEPREFIX/system.reg"
-    fi
-fi
-
 # Version-based update check: avoid re-syncing files on every launch.
 APP_VERSION_FILE="$NPP_SOURCE_DIR/.version"
 NPP_VERSION_FILE="$NPP_HOME_DIR/.version"
