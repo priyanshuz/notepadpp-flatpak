@@ -52,8 +52,11 @@ modules:
       # Install theme registry files used by the launcher for dark/light detection
       - install -Dm644 dark-mode.reg /app/share/notepadplusplus/dark-mode.reg
       - install -Dm644 light-mode.reg /app/share/notepadplusplus/light-mode.reg
-      # Write a version stamp so the wrapper can skip re-syncing files on every launch
-      - echo "8.9.6.4" > /app/share/notepadplusplus/.version
+      # Write a version stamp so the wrapper can skip re-syncing files on every launch.
+      # The version is extracted from the portable zip URL in the build manifest.
+      - |
+        version=$(grep -oP 'npp\.\K[0-9.]+(?=\.portable\.x64\.zip)' /app/manifest.json | head -n1)
+        echo "${version:-8.9.6.4}" > /app/share/notepadplusplus/.version
       # Install desktop file
       - install -Dm644 com.notepadplusplus.NotepadPlusPlus.desktop
           /app/share/applications/com.notepadplusplus.NotepadPlusPlus.desktop
