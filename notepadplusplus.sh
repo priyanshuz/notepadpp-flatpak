@@ -136,6 +136,19 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     link_fonts
     apply_cjk_font_substitutes
     wineserver --wait
+
+    # The AppImage's pre-built prefix does not register the RpcSs service.
+    # With org.winehq.Wine, wineboot registers RpcSs and Wine then tries (and
+    # fails) to start it on every launch, which crashes Notepad++'s single-
+    # instance COM path. Remove the service entry so Wine behaves like the
+    # AppImage prefix and treats the missing service as non-fatal.
+    if [ -f "$WINEPREFIX/system.reg" ]; then
+        log "Removing RpcSs service entry from system.reg"
+        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]/,/^\[/ { /^\[/!d; }' "$WINEPREFIX/system.reg"
+        # Also remove the empty section header line if it is now orphaned
+        sed -i '/^\[System\\ControlSet001\\Services\\RpcSs\]$/d' "$WINEPREFIX/system.reg"
+    fi
+
     echo "Setup complete."
     log "First run setup complete"
 else
