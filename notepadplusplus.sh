@@ -161,8 +161,7 @@ fi
 # flatpak run com.notepadplusplus.NotepadPlusPlus winecfg
 case "$1" in
     winecfg|wineboot|regedit|cmd|taskmgr|winefile|winemine|control)
-        "$WINE" "$1"
-        exit $?
+        exec "$WINE" "$1"
         ;;
 esac
 
@@ -181,11 +180,13 @@ done
 
 log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 
-# Launch without exec so the shell stays as parent. After Notepad++ exits,
-# return its exit code directly; only wait for wineserver if it is still alive.
+# Launch Notepad++ and then reap any leftover Wine children so the shell can
+# exit cleanly. Without reaping, defunct winedevice.exe zombies keep bwrap
+# alive after Notepad++ and wineserver have exited.
 "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
 NPP_EXIT=$?
-if pgrep -x "wineserver" >/dev/null 2>&1; then
-    wineserver --wait 2>/dev/null || true
-fi
+while pgrep -P $$ >/dev/null 2>&1; do
+    wait -n 2>/dev/null || true
+    sleep 0.1
+done
 exit $NPP_EXIT
