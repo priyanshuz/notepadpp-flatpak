@@ -6,7 +6,7 @@
 export WINEPREFIX="$HOME/.notepadpp/.wine"
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
-export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;mscoree,mshtml=}"
 export PATH="/app/bin:$PATH"
 
 # DXVK settings borrowed from the AppImage wrapper to keep Wine/DirectX
@@ -182,8 +182,6 @@ done
 log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 
 # Launch without exec so the shell stays as parent. After Notepad++ exits,
-# wait for wineserver to finish so the Flatpak shuts down cleanly.
+# return its exit code directly; wineserver has already shut down by then.
 "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
-NPP_EXIT=$?
-wineserver --wait 2>/dev/null || true
-exit $NPP_EXIT
+exit $?

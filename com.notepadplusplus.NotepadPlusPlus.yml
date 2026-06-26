@@ -33,7 +33,7 @@ finish-args:
   - --allow=multiarch
   - --env=WINEPREFIX=/home/user/.notepadpp/.wine
   - --env=WINEARCH=win64
-  - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d
+  - --env=WINEDLLOVERRIDES=winemenubuilder.exe=d;mscoree,mshtml=
   - --env=FONTCONFIG_PATH=/etc/fonts
   - --env=XDG_DATA_DIRS=/usr/share:/app/share
 
