@@ -180,17 +180,13 @@ done
 
 log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 
-# Launch Notepad++ and then explicitly reap any Wine children that became
-# zombies. Without reaping, defunct winedevice.exe processes keep the shell
-# (and therefore bwrap) alive after Notepad++ exits.
-"$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
-NPP_EXIT=$?
-for _ in $(seq 1 50); do
-    children=$(pgrep -P $$ 2>/dev/null || true)
-    [ -z "$children" ] && break
-    for pid in $children; do
-        wait "$pid" 2>/dev/null || true
-    done
-    sleep 0.05
-done
-exit $NPP_EXIT
+# If a wineserver is already running, another Notepad++ instance is active
+# and this invocation is likely an "Open With" handoff. Keep the shell alive
+# so wineserver stays up long enough for the handoff to complete safely.
+# For the first launch, replace the shell with Wine so no shell remains to
+# host defunct Wine children, which prevents bwrap from lingering.
+if pgrep -x "wineserver" >/dev/null 2>&1; then
+    "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
+    exit $?
+fi
+exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
