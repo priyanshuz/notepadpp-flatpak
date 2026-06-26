@@ -182,6 +182,10 @@ done
 log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
 
 # Launch without exec so the shell stays as parent. After Notepad++ exits,
-# return its exit code directly; wineserver has already shut down by then.
+# return its exit code directly; only wait for wineserver if it is still alive.
 "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
-exit $?
+NPP_EXIT=$?
+if pgrep -x "wineserver" >/dev/null 2>&1; then
+    wineserver --wait 2>/dev/null || true
+fi
+exit $NPP_EXIT
