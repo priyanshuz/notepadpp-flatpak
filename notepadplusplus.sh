@@ -1,10 +1,10 @@
 #!/bin/bash
-# Notepad++ handles single-instance via its own COM server, and Wine's
-# wineserver handles its own serialization. No external locking is needed.
+# Notepad++ uses a Win32 mutex (via wineserver) for single-instance.
+# No external locking or process detection is needed — in fact, external
+# locks can interfere with Wine's internal synchronization.
 # Force the Wine prefix into the central .notepadpp directory.
 export WINEPREFIX="$HOME/.notepadpp/.wine"
-# For diagnostics, capture Wine thread/exception output. Override with WINEDEBUG=-all to silence.
-export WINEDEBUG="${WINEDEBUG:-+tid,+seh}"
+export WINEDEBUG="${WINEDEBUG:--all}"
 export WINEARCH="${WINEARCH:-win64}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}"
 export PATH="/app/bin:$PATH"
@@ -19,21 +19,9 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Serialize wrapper launches so only one process initializes the Wine prefix
-# or starts notepad++.exe at a time. This rules out races without blocking
-# subsequent "Open With" invocations forever.
-LOCK_FILE="$NPP_HOME_DIR/.launcher.lock"
-exec 200>"$LOCK_FILE"
-log "Acquiring launcher lock..."
-flock -x 200
-log "Launcher lock acquired"
-
 log "===== launcher invoked ====="
-log "PID: $$"
-log "PPID: $PPID"
 log "Arguments ($#): $*"
 log "WINEPREFIX: $WINEPREFIX"
-log "WINE: ${WINE:-not-yet-detected}"
 
 link_fonts() {
     local font_dir="$WINEPREFIX/drive_c/windows/Fonts"
@@ -113,20 +101,18 @@ else
     echo "Wine binary not found in application runtime." >&2
     exit 1
 fi
-log "Wine binary resolved to: $WINE"
+log "Wine: $WINE"
 
 # Avoid noisy Wine cwd warnings when launched from odd host paths.
 cd "$HOME" 2>/dev/null || true
 
 # First run setup
 if [ ! -f "$WINEPREFIX/system.reg" ]; then
-    log "First run: setting up Wine prefix at $WINEPREFIX"
     echo "First run: setting up Wine prefix..."
 
     mkdir -p "$WINEPREFIX"
 
     if ! wineboot --init; then
-        log "ERROR: wineboot --init failed"
         echo "Wine initialization failed. Ensure required Flatpak runtime extensions are installed." >&2
         exit 1
     fi
@@ -136,18 +122,14 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
     link_fonts
     apply_cjk_font_substitutes
     wineserver --wait
-
     echo "Setup complete."
-    log "First run setup complete"
-else
-    log "Wine prefix already exists at $WINEPREFIX"
 fi
 
 # The AppImage's pre-built prefix does not register the RpcSs service.
 # With org.winehq.Wine, wineboot registers RpcSs and Wine then tries (and
-# fails) to start it on every launch, which crashes Notepad++'s single-
-# instance COM path. Strip the service entry before every launch so Wine
-# behaves like the AppImage prefix and treats the missing service as non-fatal.
+# fails) to start it, which crashes Notepad++'s single-instance COM path.
+# Strip the service entry before every launch so Wine behaves like the
+# AppImage prefix and treats the missing service as non-fatal.
 if [ -f "$WINEPREFIX/system.reg" ]; then
     if grep -q '^\[System\\ControlSet001\\Services\\RpcSs\]' "$WINEPREFIX/system.reg"; then
         log "Removing RpcSs service entry from system.reg"
@@ -182,19 +164,11 @@ if [ -f "$NPP_CFG" ]; then
     fi
 fi
 
-# Detect if Notepad++ is already running in this prefix.
-NPP_RUNNING=0
-if [ -S "$WINEPREFIX/wineserver.sock" ] || pgrep -f "notepad\\+\\+.exe" >/dev/null 2>&1; then
-    NPP_RUNNING=1
-fi
-log "Notepad++ already running: $NPP_RUNNING"
-
 # Convert existing file arguments to Windows paths; pass everything else through.
 NPP_ARGS=()
 for arg in "$@"; do
     if [ -e "$arg" ]; then
         win_path=$(winepath -w "$arg" 2>/dev/null || true)
-        log "winepath conversion: arg='$arg' -> win_path='$win_path'"
         if [ -n "$win_path" ]; then
             NPP_ARGS+=("$win_path")
             continue
@@ -203,10 +177,11 @@ for arg in "$@"; do
     NPP_ARGS+=("$arg")
 done
 
-log "Final NPP_ARGS: ${NPP_ARGS[*]}"
-log "Executing: $WINE $NPP_EXE ${NPP_ARGS[*]}"
-log "===== launching notepad++.exe ====="
-# Release the launcher lock before exec so the next invocation can acquire it
-# once this wineserver has registered the new process.
-flock -u 200
-exec "$WINE" "$NPP_EXE" "${NPP_ARGS[@]}" 2>>"$LOG_FILE"
+log "Launching: $WINE $NPP_EXE ${NPP_ARGS[*]}"
+
+# Launch without exec so the shell stays as parent. After Notepad++ exits,
+# wait for wineserver to finish so the Flatpak shuts down cleanly.
+"$WINE" "$NPP_EXE" "${NPP_ARGS[@]}"
+NPP_EXIT=$?
+wineserver --wait 2>/dev/null || true
+exit $NPP_EXIT
