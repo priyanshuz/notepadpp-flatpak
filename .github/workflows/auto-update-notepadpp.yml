@@ -29,11 +29,12 @@ jobs:
       - name: Update manifest to latest upstream release
         env:
           MANIFEST: com.notepadplusplus.NotepadPlusPlus.yml
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
           current_version=$(grep -oP 'releases/download/v\K[^/]+' "$MANIFEST" | head -n1)
-          latest_tag=$(curl -fsSL https://api.github.com/repos/notepad-plus-plus/notepad-plus-plus/releases/latest | jq -r '.tag_name')
+          latest_tag=$(curl -fsSL -H "Authorization: ******" https://api.github.com/repos/notepad-plus-plus/notepad-plus-plus/releases/latest | jq -r '.tag_name')
           latest_version=${latest_tag#v}
 
           echo "Current version: $current_version"
