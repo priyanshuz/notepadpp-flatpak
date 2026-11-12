@@ -66,8 +66,8 @@ modules:
 
     sources:
       - type: file
-        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.9/npp.8.9.9.portable.x64.zip
-        sha256: 96a8216930f5316ed5961663b2cc92a62ec7d303b6c3077b92a7cfc38a8761b7
+        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.9.1/npp.8.9.9.1.portable.x64.zip
+        sha256: cbcefa34677e10fe6dd19802f7d6b3b9860cd6de62afeaae7680e09c51b47779
         dest-filename: npp-portable.zip
       - type: file
         path: notepadplusplus.sh
